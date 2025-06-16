@@ -14,17 +14,21 @@ import { ReportGenerationStageHandler } from './stage-handlers/report-generation
     TaskQueueService,
     FlowRunnerService,
     TaskService,
+    TranscriptProcessingStageHandler,
+    ReportGenerationStageHandler,
+    TaskEventAnalyzeStageHandler,
     {
       provide: 'TASK_STAGE_HANDLERS',
-      useExisting: TranscriptProcessingStageHandler,
-    },
-    {
-      provide: 'TASK_STAGE_HANDLERS',
-      useExisting: ReportGenerationStageHandler,
-    },
-    {
-      provide: 'TASK_STAGE_HANDLERS',
-      useExisting: TaskEventAnalyzeStageHandler,
+      useFactory: (
+        transcript: TranscriptProcessingStageHandler,
+        report: ReportGenerationStageHandler,
+        analyze: TaskEventAnalyzeStageHandler,
+      ) => [transcript, analyze, report],
+      inject: [
+        TranscriptProcessingStageHandler,
+        ReportGenerationStageHandler,
+        TaskEventAnalyzeStageHandler,
+      ],
     },
   ],
   controllers: [TaskController],
