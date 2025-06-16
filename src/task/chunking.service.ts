@@ -4,6 +4,7 @@ import * as path from 'path';
 import OpenAI from 'openai';
 import { LocalStorageService } from '../local-storage/local-storage.service';
 import { ConfigService } from '@nestjs/config';
+import { extractLargestJsonBlock } from '../utils';
 
 const modelName = process.env.MODEL || 'gpt-4o';
 const chunkSize = parseInt(process.env.CHUNK_SIZE || '300', 10);
@@ -55,7 +56,7 @@ export class ChunkingService {
       );
       fs.writeFileSync(rawFilePath, rawContent, 'utf-8');
 
-      const cleaned = this.extractJson(rawContent);
+      const cleaned = extractLargestJsonBlock(rawContent);
       const parsed = JSON.parse(cleaned);
       const cleanFilePath = path.join(
         batchesDir,
@@ -90,19 +91,6 @@ ${JSON.stringify(chunk, null, 2)}
 （略：复制你的完整 prompt）
 ...
 请输出严格的 JSON 结构。`;
-  }
-
-  private extractJson(content: string): string {
-    const match = content.match(/```json\s*([\s\S]*?)```/);
-    if (match) return match[1].trim();
-
-    const genericMatch = content.match(/```[\s\S]*?([\s\S]*?)```/);
-    if (genericMatch) return genericMatch[1].trim();
-
-    return content
-      .replace(/^```json\s*/, '')
-      .replace(/```$/, '')
-      .trim();
   }
 
   private sleep(ms: number): Promise<void> {

@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { LocalStorageService } from '../local-storage/local-storage.service';
 import { ConfigService } from '@nestjs/config';
+import { extractLargestJsonBlock } from '../utils';
 
 const modelName = process.env.MODEL || 'gpt-4o';
 const batchSize = parseInt(process.env.BATCH_SIZE || '100', 10);
@@ -53,7 +54,7 @@ export class TranscriptProcessingService {
           const rawPath = path.join(taskPath, `batch_${i + 1}.json.raw.txt`);
           fs.writeFileSync(rawPath, content, 'utf-8');
 
-          const cleaned = this.extractJson(content);
+          const cleaned = extractLargestJsonBlock(content);
           const parsed = JSON.parse(cleaned);
           fs.writeFileSync(rawFile, JSON.stringify(parsed, null, 2), 'utf-8');
           allResults.push(...parsed);
@@ -75,12 +76,6 @@ export class TranscriptProcessingService {
 
   private generatePrompt(batchText: string): string {
     return PROMPT_TEMPLATE.replace('<<<TRANSCRIPT>>>', batchText);
-  }
-
-  private extractJson(content: string): string {
-    const match = content.match(/```json\s*([\s\S]*?)```/);
-    if (match) return match[1].trim();
-    return content.replace(/```json|```/g, '').trim();
   }
 }
 
