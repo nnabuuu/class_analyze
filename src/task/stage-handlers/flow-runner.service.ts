@@ -14,7 +14,12 @@ export class FlowRunnerService {
     private readonly localStorage: LocalStorageService,
     @Inject('TASK_STAGE_HANDLERS')
     private readonly handlers: TaskStageHandler[],
-  ) {}
+  ) {
+    console.log(
+      '✅ Injected handlers:',
+      handlers.map((h) => h.stage),
+    );
+  }
 
   async run(taskId: string, steps: FlowStep[]): Promise<void> {
     for (const step of steps) {
