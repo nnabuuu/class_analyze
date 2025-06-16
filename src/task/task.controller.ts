@@ -1,64 +1,90 @@
 import {
   Controller,
   Post,
-  Body,
-  Param,
-  Query,
   Get,
-  UseInterceptors,
+  Param,
+  Body,
   UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { buildTaskResponse } from './task-response.util';
 
 @Controller('pipeline-task')
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 
-  /**
-   * Submit transcript as JSON array directly
-   */
+  // 1. Submit transcript as JSON array
   @Post()
-  async createFromJson(@Body() dto: CreateTaskDto) {
-    const taskId = this.taskService.createTask();
-    await this.taskService.processJsonTranscript(taskId, dto.transcript);
-    return { taskId };
+  async create(@Body() dto: CreateTaskDto) {
+    const taskId = await this.taskService.createTask(dto);
+    return buildTaskResponse(taskId);
   }
 
-  /**
-   * Upload .json file that contains the transcript array
-   */
+  // 2. Upload transcript as a .json file
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async createFromFile(@UploadedFile() file: Express.Multer.File) {
-    const transcript = JSON.parse(file.buffer.toString('utf-8'));
-    const taskId = this.taskService.createTask();
-    await this.taskService.processJsonTranscript(taskId, transcript);
-    return { taskId };
+    const content = file.buffer.toString('utf-8');
+    const transcript = JSON.parse(content);
+    const taskId = await this.taskService.createTask({ transcript });
+    return buildTaskResponse(taskId);
   }
 
-  /**
-   * Upload plain text transcript (.txt)
-   */
+  // 3. Upload plain .txt transcript
   @Post('upload-text')
   @UseInterceptors(FileInterceptor('file'))
-  async createFromTxt(@UploadedFile() file: Express.Multer.File) {
-    const taskId = this.taskService.createTask();
-    const content = file.buffer.toString('utf-8');
-    await this.taskService.processTxtTranscript(taskId, content);
-    return { taskId };
+  async createFromTextFile(@UploadedFile() file: Express.Multer.File) {
+    const text = file.buffer.toString('utf-8');
+    const taskId = await this.taskService.submitTxtTranscriptTask(text);
+    return buildTaskResponse(taskId);
   }
 
-  /**
-   * Get task status or result
-   */
-  @Get(':taskId')
-  getTaskInfo(
-    @Param('taskId') taskId: string,
-    @Query('include') include: string,
-  ) {
-    const includes = (include || '').split(',').map((s) => s.trim());
-    return this.taskService.getTaskInfo(taskId, includes);
+  // 4. Get status
+  @Get(':taskId/status')
+  getStatus(@Param('taskId') taskId: string) {
+    const status = this.taskService.getTaskStatus(taskId);
+    return {
+      id: taskId,
+      ...status,
+      links: {
+        self: `/pipeline-task/${taskId}`,
+        result: `/pipeline-task/${taskId}/result`,
+        report: `/pipeline-task/${taskId}/report`,
+        chunks: `/pipeline-task/${taskId}/chunks`,
+      },
+    };
+  }
+
+  // 5. Get result (structured JSON)
+  @Get(':taskId/result')
+  getResult(@Param('taskId') taskId: string) {
+    return this.taskService.getTaskResult(taskId);
+  }
+
+  // 6. Get report (rendered markdown)
+  @Get(':taskId/report')
+  getReport(@Param('taskId') taskId: string) {
+    return this.taskService.getTaskReport(taskId);
+  }
+
+  // 7. List chunks
+  @Get(':taskId/chunks')
+  getChunks(@Param('taskId') taskId: string) {
+    return this.taskService.getTaskChunks(taskId);
+  }
+
+  // 8. Get a single chunk (parsed)
+  @Get(':taskId/chunk/:index')
+  getChunk(@Param('taskId') taskId: string, @Param('index') index: string) {
+    return this.taskService.getParsedChunk(taskId, Number(index));
+  }
+
+  // 9. Get a raw LLM chunk response
+  @Get(':taskId/chunk/:index/raw')
+  getRawChunk(@Param('taskId') taskId: string, @Param('index') index: string) {
+    return this.taskService.getRawChunk(taskId, Number(index));
   }
 }

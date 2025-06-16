@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
-import { TaskMeta } from '../task/task.service';
 import { TaskProgress } from '../task/task-progress.enum';
 
 @Injectable()
@@ -20,6 +19,26 @@ export class LocalStorageService {
     const fullPath = path.join(taskPath, fileName);
     fs.writeFileSync(fullPath, content, 'utf-8');
     return fullPath;
+  }
+
+  readTextFile(taskId: string, fileName: string): string {
+    const filePath = path.join(this.getTaskFolder(taskId), fileName);
+
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`❌ File not found: ${filePath}`);
+    }
+
+    return fs.readFileSync(filePath, 'utf-8');
+  }
+
+  readTextFileSafe(taskId: string, fileName: string): string | null {
+    try {
+      const filePath = path.join(this.getTaskFolder(taskId), fileName);
+      if (!fs.existsSync(filePath)) return null;
+      return fs.readFileSync(filePath, 'utf-8');
+    } catch {
+      return null;
+    }
   }
 
   readJson(taskId: string, fileName: string): any {
@@ -56,11 +75,5 @@ export class LocalStorageService {
       updatedAt: new Date().toISOString(),
     };
     fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
-  }
-
-  readProgress(taskId: string): TaskMeta | null {
-    const file = this.getProgressFilePath(taskId);
-    if (!fs.existsSync(file)) return null;
-    return JSON.parse(fs.readFileSync(file, 'utf-8'));
   }
 }

@@ -1,124 +1,153 @@
-import { Injectable } from '@nestjs/common';
-import { LocalStorageService } from '../local-storage/local-storage.service';
-import { ConfigService } from '@nestjs/config';
-import { TranscriptProcessingService } from './transcript-processing.service';
-import { ChunkingService } from './chunking.service';
-import { ReportService } from '../report/report.service';
-import { FlowRunnerService, FlowStep } from './flow-runner.service';
-import { TaskProgress } from './task-progress.enum';
-import * as fs from 'fs';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-
-export interface TaskMeta {
-  taskId: string;
-  progress: TaskProgress;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { LocalStorageService } from '../local-storage/local-storage.service';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { TranscriptProcessingService } from './transcript-processing.service';
+import { TaskQueueService } from './task-queue.service';
+import * as fs from 'node:fs';
+import { TaskStage, TaskStatus } from './task.types'; // in-memory or Bull-based queue
 
 @Injectable()
 export class TaskService {
   constructor(
     private readonly localStorage: LocalStorageService,
-    private readonly config: ConfigService,
-    private readonly transcriptProcessing: TranscriptProcessingService,
-    private readonly chunkingService: ChunkingService,
-    private readonly reportService: ReportService,
-    private readonly flowRunner: FlowRunnerService,
+    private readonly transcriptProcessor: TranscriptProcessingService,
+    @Inject(forwardRef(() => TaskQueueService))
+    private readonly taskQueue: TaskQueueService,
   ) {}
 
-  createTask(): string {
+  // 👇 For structured transcript array
+  async createTask(dto: CreateTaskDto): Promise<string> {
     const taskId = uuidv4();
-    this.localStorage.getTaskFolder(taskId);
-    this.localStorage.saveProgress(taskId, TaskProgress.Created);
+
+    // Save input
+    this.localStorage.saveFile(
+      taskId,
+      'input.json',
+      JSON.stringify(dto.transcript, null, 2),
+    );
+
+    // Save initial status
+    this.updateStatus(taskId, 'queued', 'awaiting_processing', 0);
+
+    // Enqueue the task
+    await this.taskQueue.enqueue({
+      taskId,
+      type: 'json_transcript',
+    });
+
     return taskId;
   }
 
-  updateProgress(taskId: string, progress: TaskProgress) {
-    this.localStorage.saveProgress(taskId, progress);
+  // 👇 For raw .txt file
+  async submitTxtTranscriptTask(text: string): Promise<string> {
+    const taskId = uuidv4();
+
+    this.localStorage.saveFile(taskId, 'input.txt', text);
+    this.updateStatus(taskId, 'queued', 'awaiting_processing', 0);
+
+    await this.taskQueue.enqueue({
+      taskId,
+      type: 'txt_transcript',
+    });
+
+    return taskId;
   }
 
-  getTaskStatus(taskId: string): TaskMeta | null {
-    return this.localStorage.readProgress(taskId);
+  // ✅ Used by background worker
+  async runTask(task: { taskId: string; type: string }) {
+    const { taskId, type } = task;
+
+    try {
+      this.updateStatus(taskId, 'processing', 'awaiting_processing', 0.05);
+
+      if (type === 'json_transcript') {
+        const transcript = this.localStorage.readJsonSafe(taskId, 'input.json');
+        await this.transcriptProcessor.runTranscriptCleaning(
+          transcript,
+          taskId,
+        );
+      } else if (type === 'txt_transcript') {
+        const text = this.localStorage.readTextFileSafe(taskId, 'input.txt');
+        await this.transcriptProcessor.runTranscriptCleaning(text, taskId);
+      }
+
+      this.updateStatus(taskId, 'completed', 'done', 1);
+    } catch (err) {
+      console.error(`❌ Task ${taskId} failed:`, err.message);
+      this.localStorage.saveFile(
+        taskId,
+        'status.json',
+        JSON.stringify(
+          {
+            status: 'failed',
+            stage: 'error',
+            progress: 1,
+            message: err.message,
+          },
+          null,
+          2,
+        ),
+      );
+    }
   }
 
-  async processTxtTranscript(taskId: string, txtContent: string) {
-    // Save transcript.txt first
-    this.localStorage.saveFile(taskId, 'transcript.txt', txtContent);
-
-    // Define the flow
-    const steps: FlowStep[] = [
-      {
-        name: TaskProgress.TxtParsed,
-        handler: async () => {
-          const cleaned = await this.transcriptProcessing.runTranscriptCleaning(
-            taskId,
-            txtContent,
-          );
-          this.localStorage.saveFile(
-            taskId,
-            'output.json',
-            JSON.stringify(cleaned, null, 2),
-          );
-        },
-      },
-      {
-        name: TaskProgress.Chunked,
-        handler: async () => {
-          const cleanedJson = this.localStorage.readJson(taskId, 'output.json');
-          await this.chunkingService.process(taskId, cleanedJson);
-        },
-      },
-      {
-        name: TaskProgress.ReportGenerated,
-        handler: async () => {
-          this.reportService.generateReport(taskId);
-        },
-      },
-    ];
-
-    // Run the pipeline
-    await this.flowRunner.run(taskId, steps);
-  }
-
-  async processJsonTranscript(taskId: string, transcript: any[]) {
+  private updateStatus(
+    taskId: string,
+    status: TaskStatus['status'],
+    stage: TaskStage,
+    progress: number,
+    message?: string,
+  ) {
     this.localStorage.saveFile(
       taskId,
-      'output.json',
-      JSON.stringify(transcript, null, 2),
+      'status.json',
+      JSON.stringify(
+        {
+          status,
+          stage,
+          progress,
+          message,
+        },
+        null,
+        2,
+      ),
     );
-    await this.flowRunner.run(taskId, [
-      {
-        name: TaskProgress.Chunked,
-        handler: async () => {
-          await this.chunkingService.process(taskId, transcript);
-        },
-      },
-      {
-        name: TaskProgress.ReportGenerated,
-        handler: async () => {
-          this.reportService.generateReport(taskId);
-        },
-      },
-    ]);
   }
 
-  async getTaskInfo(taskId: string, includes: string[]) {
-    const data: any = { taskId };
+  getTaskStatus(taskId: string) {
+    return (
+      this.localStorage.readJsonSafe(taskId, 'status.json') || {
+        status: 'unknown',
+        stage: null,
+        progress: null,
+      }
+    );
+  }
 
-    if (includes.includes('status')) {
-      data.status = this.localStorage.readProgress(taskId);
-    }
+  getTaskResult(taskId: string) {
+    return this.localStorage.readJsonSafe(taskId, 'output_tasks.json');
+  }
 
-    if (includes.includes('result')) {
-      data.result = this.localStorage.readJsonSafe(taskId, 'output_tasks.json');
-    }
+  getTaskReport(taskId: string) {
+    return this.localStorage.readTextFile(taskId, 'output_tasks_report.md');
+  }
 
-    if (includes.includes('files')) {
-      const folder = this.localStorage.getTaskFolder(taskId);
-      data.files = fs.readdirSync(folder).filter((f) => !f.startsWith('.'));
-    }
+  getTaskChunks(taskId: string): string[] {
+    const folder = this.localStorage.getTaskFolder(taskId);
+    return fs
+      .readdirSync(folder)
+      .filter((name) => /^chunk_\d+\.json$/.test(name))
+      .sort();
+  }
 
-    return data;
+  getParsedChunk(taskId: string, index: number) {
+    const fileName = `chunk_${index}.json`;
+    return this.localStorage.readJsonSafe(taskId, fileName);
+  }
+
+  getRawChunk(taskId: string, index: number) {
+    const fileName = `chunk_${index}.raw.txt`;
+    return this.localStorage.readTextFile(taskId, fileName);
   }
 }

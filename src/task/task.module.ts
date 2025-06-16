@@ -6,10 +6,12 @@ import { TranscriptProcessingService } from './transcript-processing.service';
 import { ChunkingService } from './chunking.service';
 import { ReportService } from '../report/report.service';
 import { FlowRunnerService } from './flow-runner.service';
+import { TaskQueueService } from './task-queue.service';
 
 @Module({
   imports: [LocalStorageModule],
   providers: [
+    TaskQueueService,
     FlowRunnerService,
     ChunkingService,
     TaskService,
