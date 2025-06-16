@@ -108,13 +108,7 @@ export class TaskService {
 
   // ✅ Task metadata access
   getTaskStatus(taskId: string) {
-    return (
-      this.localStorage.readJsonSafe(taskId, 'status.json') || {
-        status: 'unknown',
-        stage: null,
-        progress: null,
-      }
-    );
+    return this.localStorage.readJsonSafe(taskId, 'progress.json');
   }
 
   getTaskResult(taskId: string) {
