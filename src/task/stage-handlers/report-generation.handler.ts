@@ -1,13 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { LocalStorageService } from '../local-storage/local-storage.service';
+import { TaskStageHandler } from './stage-handler.interface';
+import { LocalStorageService } from '../../local-storage/local-storage.service';
 import * as path from 'path';
 import * as fs from 'fs';
 
 @Injectable()
-export class ReportService {
+export class ReportGenerationStageHandler implements TaskStageHandler {
+  readonly stage = 'report_generation';
+
   constructor(private readonly localStorage: LocalStorageService) {}
 
-  generateReport(taskId: string): string {
+  async handle(taskId: string): Promise<void> {
     const tasks = this.localStorage.readJson(taskId, 'output_tasks.json');
 
     const lines: string[] = [];
@@ -45,7 +48,5 @@ export class ReportService {
       'output_tasks_report.md',
     );
     fs.writeFileSync(reportPath, lines.join('\n'), 'utf-8');
-
-    return reportPath;
   }
 }

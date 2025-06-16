@@ -2,26 +2,38 @@ import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import OpenAI from 'openai';
-import { LocalStorageService } from '../local-storage/local-storage.service';
 import { ConfigService } from '@nestjs/config';
-import { extractLargestJsonBlock } from '../utils';
+import { TaskStageHandler } from './stage-handler.interface';
+import { LocalStorageService } from '../../local-storage/local-storage.service';
+import { extractLargestJsonBlock } from '../../utils';
+import { TaskStage } from '../task.types';
 
 const modelName = process.env.MODEL || 'gpt-4o';
 const chunkSize = parseInt(process.env.CHUNK_SIZE || '300', 10);
 const overlap = parseInt(process.env.OVERLAP || '30', 10);
 
 @Injectable()
-export class ChunkingService {
+export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
   ) {}
 
+  readonly stage: TaskStage = 'task-event-analyze';
+
+  async handle(taskId: string): Promise<void> {
+    const transcript = this.localStorage.readJsonSafe(taskId, 'input.json');
+    await this._process(taskId, transcript);
+  }
+
   private readonly openai = new OpenAI({
     apiKey: this.config.get('OPENAI_API_KEY'),
   });
 
-  async process(taskId: string, transcriptJson: any[]): Promise<string> {
+  private async _process(
+    taskId: string,
+    transcriptJson: any[],
+  ): Promise<string> {
     const taskFolder = this.localStorage.getTaskFolder(taskId);
     const batchesDir = path.join(taskFolder, 'batches');
     if (!fs.existsSync(batchesDir))

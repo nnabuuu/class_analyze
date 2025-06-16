@@ -1,10 +1,8 @@
 export type TaskStage =
   | 'initializing'
-  | 'awaiting_processing'
-  | 'chunking'
-  | 'calling_llm'
-  | 'parsing'
-  | 'generating_report'
+  | 'transcript_preprocessing'
+  | 'task-event-analyze'
+  | 'report_generation'
   | 'done'
   | 'error';
 

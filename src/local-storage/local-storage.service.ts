@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
-import { TaskProgress } from '../task/task-progress.enum';
+import { TaskStage } from '../task/task.types';
 
 @Injectable()
 export class LocalStorageService {
@@ -67,13 +67,29 @@ export class LocalStorageService {
     return path.join(this.getTaskFolder(taskId), 'progress.json');
   }
 
-  saveProgress(taskId: string, progress: TaskProgress) {
+  saveProgress(
+    taskId: string,
+    stage: TaskStage,
+    progress?: number,
+    message?: string,
+    status:
+      | 'created'
+      | 'queued'
+      | 'processing'
+      | 'completed'
+      | 'failed' = 'processing',
+  ): void {
     const file = this.getProgressFilePath(taskId);
+
     const data = {
       taskId,
+      status,
+      stage,
       progress,
+      message,
       updatedAt: new Date().toISOString(),
     };
+
     fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
   }
 }

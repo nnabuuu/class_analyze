@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TaskModule } from './task/task.module';
 import { LocalStorageModule } from './local-storage/local-storage.module';
-import { ReportModule } from './report/report.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -13,7 +12,6 @@ import { ConfigModule } from '@nestjs/config';
     }),
     TaskModule,
     LocalStorageModule,
-    ReportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

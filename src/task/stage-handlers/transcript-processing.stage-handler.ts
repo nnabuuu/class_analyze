@@ -2,15 +2,17 @@ import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
-import { LocalStorageService } from '../local-storage/local-storage.service';
+import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { ConfigService } from '@nestjs/config';
-import { extractLargestJsonBlock } from '../utils';
+import { extractLargestJsonBlock } from '../../utils';
+import { TaskStageHandler } from './stage-handler.interface';
+import { TaskStage } from '../task.types';
 
 const modelName = process.env.MODEL || 'gpt-4o';
 const batchSize = parseInt(process.env.BATCH_SIZE || '100', 10);
 
 @Injectable()
-export class TranscriptProcessingService {
+export class TranscriptProcessingStageHandler implements TaskStageHandler {
   private readonly openai = new OpenAI({
     apiKey: this.config.get('OPENAI_API_KEY'),
   });
@@ -19,7 +21,18 @@ export class TranscriptProcessingService {
     private readonly config: ConfigService,
   ) {}
 
-  async runTranscriptCleaning(
+  stage: TaskStage = 'transcript_preprocessing';
+  async handle(taskId: string): Promise<void> {
+    const transcriptText = this.localStorage.readTextFile(taskId, 'input.txt');
+    const cleaned = await this._runTranscriptCleaning(taskId, transcriptText);
+    this.localStorage.saveFile(
+      taskId,
+      'input.json',
+      JSON.stringify(cleaned, null, 2),
+    );
+  }
+
+  async _runTranscriptCleaning(
     taskId: string,
     transcriptText: string,
   ): Promise<string[]> {

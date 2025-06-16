@@ -2,35 +2,36 @@ import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { LocalStorageService } from '../local-storage/local-storage.service';
 import { CreateTaskDto } from './dto/create-task.dto';
-import { TranscriptProcessingService } from './transcript-processing.service';
 import { TaskQueueService } from './task-queue.service';
-import * as fs from 'node:fs';
-import { TaskStage, TaskStatus } from './task.types'; // in-memory or Bull-based queue
+import { FlowRunnerService, FlowStep } from './stage-handlers/flow-runner.service';
+import { TaskStage, TaskStatus } from './task.types';
+import * as fs from 'fs';
 
 @Injectable()
 export class TaskService {
   constructor(
     private readonly localStorage: LocalStorageService,
-    private readonly transcriptProcessor: TranscriptProcessingService,
     @Inject(forwardRef(() => TaskQueueService))
     private readonly taskQueue: TaskQueueService,
+    private readonly flowRunner: FlowRunnerService,
   ) {}
 
-  // 👇 For structured transcript array
+  // ✅ For structured transcript array
   async createTask(dto: CreateTaskDto): Promise<string> {
     const taskId = uuidv4();
-
-    // Save input
     this.localStorage.saveFile(
       taskId,
       'input.json',
       JSON.stringify(dto.transcript, null, 2),
     );
+    this.localStorage.saveProgress(
+      taskId,
+      'initializing',
+      0,
+      'Task created',
+      'queued',
+    );
 
-    // Save initial status
-    this.updateStatus(taskId, 'queued', 'awaiting_processing', 0);
-
-    // Enqueue the task
     await this.taskQueue.enqueue({
       taskId,
       type: 'json_transcript',
@@ -39,12 +40,17 @@ export class TaskService {
     return taskId;
   }
 
-  // 👇 For raw .txt file
+  // ✅ For raw .txt file
   async submitTxtTranscriptTask(text: string): Promise<string> {
     const taskId = uuidv4();
-
     this.localStorage.saveFile(taskId, 'input.txt', text);
-    this.updateStatus(taskId, 'queued', 'awaiting_processing', 0);
+    this.localStorage.saveProgress(
+      taskId,
+      'initializing',
+      0,
+      'Task created',
+      'queued',
+    );
 
     await this.taskQueue.enqueue({
       taskId,
@@ -54,67 +60,53 @@ export class TaskService {
     return taskId;
   }
 
-  // ✅ Used by background worker
+  // ✅ Used by the queue runner
   async runTask(task: { taskId: string; type: string }) {
     const { taskId, type } = task;
 
     try {
-      this.updateStatus(taskId, 'processing', 'awaiting_processing', 0.05);
+      this.localStorage.saveProgress(
+        taskId,
+        'initializing',
+        0.05,
+        'Task pulled from queue',
+        'processing',
+      );
 
-      if (type === 'json_transcript') {
-        const transcript = this.localStorage.readJsonSafe(taskId, 'input.json');
-        await this.transcriptProcessor.runTranscriptCleaning(
-          transcript,
-          taskId,
-        );
-      } else if (type === 'txt_transcript') {
-        const text = this.localStorage.readTextFileSafe(taskId, 'input.txt');
-        await this.transcriptProcessor.runTranscriptCleaning(text, taskId);
-      }
+      const steps = this.buildStepsForTask(taskId, type);
+      await this.flowRunner.run(taskId, steps);
 
-      this.updateStatus(taskId, 'completed', 'done', 1);
+      this.localStorage.saveProgress(
+        taskId,
+        'done',
+        1,
+        'All stages completed',
+        'completed',
+      );
     } catch (err) {
       console.error(`❌ Task ${taskId} failed:`, err.message);
-      this.localStorage.saveFile(
-        taskId,
-        'status.json',
-        JSON.stringify(
-          {
-            status: 'failed',
-            stage: 'error',
-            progress: 1,
-            message: err.message,
-          },
-          null,
-          2,
-        ),
-      );
+      this.localStorage.saveProgress(taskId, 'error', 1, err.message, 'failed');
     }
   }
 
-  private updateStatus(
-    taskId: string,
-    status: TaskStatus['status'],
-    stage: TaskStage,
-    progress: number,
-    message?: string,
-  ) {
-    this.localStorage.saveFile(
-      taskId,
-      'status.json',
-      JSON.stringify(
-        {
-          status,
-          stage,
-          progress,
-          message,
-        },
-        null,
-        2,
-      ),
-    );
+  // ✅ Task execution plan by type
+  buildStepsForTask(taskId: string, type: string): FlowStep[] {
+    if (type === 'txt_transcript') {
+      return [
+        { name: 'transcript_preprocessing' },
+        { name: 'task-event-analyze' },
+        { name: 'report_generation' },
+      ];
+    }
+
+    if (type === 'json_transcript') {
+      return [{ name: 'task-event-analyze' }, { name: 'report_generation' }];
+    }
+
+    throw new Error(`Unsupported task type: ${type}`);
   }
 
+  // ✅ Task metadata access
   getTaskStatus(taskId: string) {
     return (
       this.localStorage.readJsonSafe(taskId, 'status.json') || {
@@ -142,12 +134,10 @@ export class TaskService {
   }
 
   getParsedChunk(taskId: string, index: number) {
-    const fileName = `chunk_${index}.json`;
-    return this.localStorage.readJsonSafe(taskId, fileName);
+    return this.localStorage.readJsonSafe(taskId, `chunk_${index}.json`);
   }
 
   getRawChunk(taskId: string, index: number) {
-    const fileName = `chunk_${index}.raw.txt`;
-    return this.localStorage.readTextFile(taskId, fileName);
+    return this.localStorage.readTextFile(taskId, `chunk_${index}.raw.txt`);
   }
 }
