@@ -16,15 +16,15 @@ import { ReportGenerationStageHandler } from './stage-handlers/report-generation
     TaskService,
     {
       provide: 'TASK_STAGE_HANDLERS',
-      useClass: TranscriptProcessingStageHandler,
+      useExisting: TranscriptProcessingStageHandler,
     },
     {
       provide: 'TASK_STAGE_HANDLERS',
-      useClass: ReportGenerationStageHandler,
+      useExisting: ReportGenerationStageHandler,
     },
     {
       provide: 'TASK_STAGE_HANDLERS',
-      useClass: TaskEventAnalyzeStageHandler,
+      useExisting: TaskEventAnalyzeStageHandler,
     },
   ],
   controllers: [TaskController],
