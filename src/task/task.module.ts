@@ -20,6 +20,7 @@ import { SyllabusMappingStageHandler } from './stage-handlers/syllabus.stage-han
     FlowRunnerService,
     TaskService,
     TranscriptProcessingStageHandler,
+    SyllabusMappingStageHandler,
     ReportGenerationStageHandler,
     TaskEventAnalyzeStageHandler,
     DeepAnalyzeStageHandler,
