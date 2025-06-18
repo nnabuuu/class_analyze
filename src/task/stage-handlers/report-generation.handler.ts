@@ -29,7 +29,7 @@ export class ReportGenerationStageHandler implements TaskStageHandler {
       'mapped_syllabus.json',
     );
     if (syllabusContent) {
-      lines.push('## 教学目标映射结果');
+      lines.push('## 教学目标分析结果');
       lines.push('');
       lines.push('```json');
       lines.push(syllabusContent);
