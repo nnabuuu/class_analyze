@@ -9,6 +9,8 @@ import { TaskQueueService } from './task-queue.service';
 import { ReportGenerationStageHandler } from './stage-handlers/report-generation.handler';
 import { DeepAnalyzeStageHandler } from './stage-handlers/deep-analyze.stage-handler';
 import { EchoDeepAnalyzeItem } from './deep-analyze-items/echo.item';
+import { ICAPDeepAnalyzeItem } from './deep-analyze-items/icap.item';
+import { BloomDeepAnalyzeItem } from './deep-analyze-items/bloom.item';
 
 @Module({
   imports: [LocalStorageModule],
@@ -21,6 +23,8 @@ import { EchoDeepAnalyzeItem } from './deep-analyze-items/echo.item';
     TaskEventAnalyzeStageHandler,
     DeepAnalyzeStageHandler,
     EchoDeepAnalyzeItem,
+    ICAPDeepAnalyzeItem,
+    BloomDeepAnalyzeItem,
     {
       provide: 'TASK_STAGE_HANDLERS',
       useFactory: (
@@ -38,8 +42,12 @@ import { EchoDeepAnalyzeItem } from './deep-analyze-items/echo.item';
     },
     {
       provide: 'DEEP_ANALYZE_ITEMS',
-      useFactory: (echo: EchoDeepAnalyzeItem) => [echo],
-      inject: [EchoDeepAnalyzeItem],
+      useFactory: (
+        echo: EchoDeepAnalyzeItem,
+        icap: ICAPDeepAnalyzeItem,
+        bloom: BloomDeepAnalyzeItem,
+      ) => [echo, icap, bloom],
+      inject: [EchoDeepAnalyzeItem, ICAPDeepAnalyzeItem, BloomDeepAnalyzeItem],
     },
   ],
   controllers: [TaskController],
