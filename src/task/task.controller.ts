@@ -6,11 +6,13 @@ import {
   Body,
   UploadedFile,
   UseInterceptors,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { buildTaskResponse } from './task-response.util';
+import { Response } from 'express';
 
 @Controller('pipeline-task')
 export class TaskController {
@@ -86,5 +88,17 @@ export class TaskController {
   @Get(':taskId/chunk/:index/raw')
   getRawChunk(@Param('taskId') taskId: string, @Param('index') index: string) {
     return this.taskService.getRawChunk(taskId, Number(index));
+  }
+
+  // 10. Download all task files as a zip
+  @Get(':taskId/archive')
+  async getArchive(@Param('taskId') taskId: string, @Res() res: Response) {
+    const archive = this.taskService.getTaskArchive(taskId);
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${taskId}.zip"`,
+    });
+    archive.pipe(res);
+    await archive.finalize();
   }
 }
