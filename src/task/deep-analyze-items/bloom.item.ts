@@ -9,7 +9,13 @@ export interface BloomEventResult {
   start: number;
   end: number;
   text: string;
-  bloom_level: 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create';
+  bloom_level:
+    | 'Remember'
+    | 'Understand'
+    | 'Apply'
+    | 'Analyze'
+    | 'Evaluate'
+    | 'Create';
   reasoning: string;
   confidence: number;
 }
@@ -17,12 +23,24 @@ export interface BloomEventResult {
 export interface BloomTaskSummary {
   task_title: string;
   summary: string;
-  predominant_level: 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create';
+  predominant_level:
+    | 'Remember'
+    | 'Understand'
+    | 'Apply'
+    | 'Analyze'
+    | 'Evaluate'
+    | 'Create';
 }
 
 export interface BloomOverallSummary {
   overall_summary: string;
-  predominant_level: 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create';
+  predominant_level:
+    | 'Remember'
+    | 'Understand'
+    | 'Apply'
+    | 'Analyze'
+    | 'Evaluate'
+    | 'Create';
 }
 
 const modelName = process.env.MODEL || 'gpt-4o';
@@ -36,14 +54,17 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
   readonly dependsOn = 'task-event-analyze' as const;
   readonly outputFiles = ['bloom_analysis.json'];
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly storage: LocalStorageService,
+  ) {}
 
   private readonly openai = new OpenAI({
     apiKey: this.config.get('OPENAI_API_KEY'),
   });
 
-  async analyze(taskId: string, storage: LocalStorageService): Promise<void> {
-    const tasks = storage.readJson(taskId, 'output_tasks.json');
+  async analyze(taskId: string): Promise<void> {
+    const tasks = this.storage.readJson(taskId, 'output_tasks.json');
     const eventResults: BloomEventResult[] = [];
     const taskSummaries: BloomTaskSummary[] = [];
 
@@ -65,7 +86,7 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
 
     const overall = await this.summarizeOverall(taskSummaries);
 
-    storage.saveFile(
+    this.storage.saveFile(
       taskId,
       this.outputFiles[0],
       JSON.stringify({ eventResults, taskSummaries, overall }, null, 2),

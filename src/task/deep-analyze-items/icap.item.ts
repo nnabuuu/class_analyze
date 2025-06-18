@@ -23,14 +23,17 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
   readonly dependsOn = 'task-event-analyze' as const;
   readonly outputFiles = ['icap_analysis.json'];
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly storage: LocalStorageService,
+  ) {}
 
   private readonly openai = new OpenAI({
     apiKey: this.config.get('OPENAI_API_KEY'),
   });
 
-  async analyze(taskId: string, storage: LocalStorageService): Promise<void> {
-    const tasks = storage.readJson(taskId, 'output_tasks.json');
+  async analyze(taskId: string): Promise<void> {
+    const tasks = this.storage.readJson(taskId, 'output_tasks.json');
     const results: ICAPResult[] = [];
 
     for (const task of tasks) {
@@ -41,7 +44,7 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
       }
     }
 
-    storage.saveFile(
+    this.storage.saveFile(
       taskId,
       this.outputFiles[0],
       JSON.stringify(results, null, 2),
