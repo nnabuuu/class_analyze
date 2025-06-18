@@ -1,6 +1,8 @@
+import { Injectable } from '@nestjs/common';
 import { DeepAnalyzeItem } from '../stage-handlers/deep-analyze-item.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 
+@Injectable()
 export class EchoDeepAnalyzeItem implements DeepAnalyzeItem {
   readonly name = 'echo';
   readonly dependsOn = 'task-event-analyze' as const;
