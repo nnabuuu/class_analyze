@@ -24,6 +24,19 @@ export class ReportGenerationStageHandler implements TaskStageHandler {
     lines.push('# 课堂结构报告');
     lines.push('');
 
+    const syllabusContent = this.localStorage.readTextFileSafe(
+      taskId,
+      'mapped_syllabus.json',
+    );
+    if (syllabusContent) {
+      lines.push('## 教学目标映射结果');
+      lines.push('');
+      lines.push('```json');
+      lines.push(syllabusContent);
+      lines.push('```');
+      lines.push('');
+    }
+
     tasks.forEach((task: any, taskIndex: number) => {
       lines.push(`## 教学任务 ${taskIndex + 1}：${task.task_title}`);
       lines.push('');
