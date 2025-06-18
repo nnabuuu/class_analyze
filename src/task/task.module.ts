@@ -7,6 +7,8 @@ import { TaskEventAnalyzeStageHandler } from './stage-handlers/task-event-analyz
 import { FlowRunnerService } from './stage-handlers/flow-runner.service';
 import { TaskQueueService } from './task-queue.service';
 import { ReportGenerationStageHandler } from './stage-handlers/report-generation.handler';
+import { DeepAnalyzeStageHandler } from './stage-handlers/deep-analyze.stage-handler';
+import { EchoDeepAnalyzeItem } from './deep-analyze-items/echo.item';
 
 @Module({
   imports: [LocalStorageModule],
@@ -17,18 +19,27 @@ import { ReportGenerationStageHandler } from './stage-handlers/report-generation
     TranscriptProcessingStageHandler,
     ReportGenerationStageHandler,
     TaskEventAnalyzeStageHandler,
+    DeepAnalyzeStageHandler,
+    EchoDeepAnalyzeItem,
     {
       provide: 'TASK_STAGE_HANDLERS',
       useFactory: (
         transcript: TranscriptProcessingStageHandler,
         report: ReportGenerationStageHandler,
         analyze: TaskEventAnalyzeStageHandler,
-      ) => [transcript, analyze, report],
+        deepAnalyze: DeepAnalyzeStageHandler,
+      ) => [transcript, analyze, deepAnalyze, report],
       inject: [
         TranscriptProcessingStageHandler,
         ReportGenerationStageHandler,
         TaskEventAnalyzeStageHandler,
+        DeepAnalyzeStageHandler,
       ],
+    },
+    {
+      provide: 'DEEP_ANALYZE_ITEMS',
+      useFactory: (echo: EchoDeepAnalyzeItem) => [echo],
+      inject: [EchoDeepAnalyzeItem],
     },
   ],
   controllers: [TaskController],

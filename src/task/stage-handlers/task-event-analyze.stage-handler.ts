@@ -20,6 +20,7 @@ export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
   ) {}
 
   readonly stage: TaskStage = 'task-event-analyze';
+  readonly outputFiles = ['output_tasks.json'];
 
   async handle(taskId: string): Promise<void> {
     const transcript = this.localStorage.readJsonSafe(taskId, 'input.json');

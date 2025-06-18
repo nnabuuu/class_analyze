@@ -1,0 +1,14 @@
+import { DeepAnalyzeItem } from '../stage-handlers/deep-analyze-item.interface';
+import { LocalStorageService } from '../../local-storage/local-storage.service';
+
+export class EchoDeepAnalyzeItem implements DeepAnalyzeItem {
+  readonly name = 'echo';
+  readonly dependsOn = 'task-event-analyze' as const;
+  readonly outputFiles = ['echo.json'];
+
+  async analyze(taskId: string, storage: LocalStorageService): Promise<void> {
+    const tasks = storage.readJson(taskId, 'output_tasks.json');
+    const data = { tasksCount: Array.isArray(tasks) ? tasks.length : 0 };
+    storage.saveFile(taskId, 'echo.json', JSON.stringify(data, null, 2));
+  }
+}

@@ -22,6 +22,7 @@ export class TranscriptProcessingStageHandler implements TaskStageHandler {
   ) {}
 
   stage: TaskStage = 'transcript_preprocessing';
+  readonly outputFiles = ['input.json'];
   async handle(taskId: string): Promise<void> {
     const transcriptText = this.localStorage.readTextFile(taskId, 'input.txt');
     const cleaned = await this._runTranscriptCleaning(taskId, transcriptText);

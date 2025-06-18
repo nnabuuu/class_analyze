@@ -7,6 +7,7 @@ import * as fs from 'fs';
 @Injectable()
 export class ReportGenerationStageHandler implements TaskStageHandler {
   readonly stage = 'report_generation';
+  readonly outputFiles = ['output_tasks_report.md'];
 
   constructor(private readonly localStorage: LocalStorageService) {}
 
