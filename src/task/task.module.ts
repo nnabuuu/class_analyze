@@ -11,6 +11,7 @@ import { DeepAnalyzeStageHandler } from './stage-handlers/deep-analyze.stage-han
 import { EchoDeepAnalyzeItem } from './deep-analyze-items/echo.item';
 import { ICAPDeepAnalyzeItem } from './deep-analyze-items/icap.item';
 import { BloomDeepAnalyzeItem } from './deep-analyze-items/bloom.item';
+import { SyllabusMappingStageHandler } from './stage-handlers/syllabus.stage-handler';
 
 @Module({
   imports: [LocalStorageModule],
@@ -30,12 +31,14 @@ import { BloomDeepAnalyzeItem } from './deep-analyze-items/bloom.item';
       useFactory: (
         transcript: TranscriptProcessingStageHandler,
         report: ReportGenerationStageHandler,
+        syllabus_mapping: SyllabusMappingStageHandler,
         analyze: TaskEventAnalyzeStageHandler,
         deepAnalyze: DeepAnalyzeStageHandler,
-      ) => [transcript, analyze, deepAnalyze, report],
+      ) => [transcript, analyze, syllabus_mapping, deepAnalyze, report],
       inject: [
         TranscriptProcessingStageHandler,
         ReportGenerationStageHandler,
+        SyllabusMappingStageHandler,
         TaskEventAnalyzeStageHandler,
         DeepAnalyzeStageHandler,
       ],
