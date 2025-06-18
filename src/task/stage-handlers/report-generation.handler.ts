@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { TaskStageHandler } from './stage-handler.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
+import { DeepAnalyzeItem } from './deep-analyze-item.interface';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -9,7 +10,12 @@ export class ReportGenerationStageHandler implements TaskStageHandler {
   readonly stage = 'report_generation';
   readonly outputFiles = ['output_tasks_report.md'];
 
-  constructor(private readonly localStorage: LocalStorageService) {}
+  constructor(
+    private readonly localStorage: LocalStorageService,
+    @Inject('DEEP_ANALYZE_ITEMS')
+    @Optional()
+    private readonly deepAnalyzeItems: DeepAnalyzeItem[] = [],
+  ) {}
 
   async handle(taskId: string): Promise<void> {
     const tasks = this.localStorage.readJson(taskId, 'output_tasks.json');
@@ -43,6 +49,23 @@ export class ReportGenerationStageHandler implements TaskStageHandler {
 
       lines.push('');
     });
+
+    if (this.deepAnalyzeItems.length > 0) {
+      lines.push('# 深度分析');
+      lines.push('');
+      for (const item of this.deepAnalyzeItems) {
+        const outputFile = item.outputFiles[0];
+        const content = this.localStorage.readTextFileSafe(taskId, outputFile);
+        if (content) {
+          lines.push(`## ${item.name}`);
+          lines.push('');
+          lines.push('```json');
+          lines.push(content);
+          lines.push('```');
+          lines.push('');
+        }
+      }
+    }
 
     const reportPath = path.join(
       this.localStorage.getTaskFolder(taskId),
