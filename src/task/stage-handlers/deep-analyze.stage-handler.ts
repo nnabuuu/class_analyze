@@ -13,9 +13,11 @@ export class DeepAnalyzeStageHandler implements TaskStageHandler {
 
   constructor(
     private readonly storage: LocalStorageService,
-    @Inject('DEEP_ANALYZE_ITEMS') @Optional()
+    @Inject('DEEP_ANALYZE_ITEMS')
+    @Optional()
     private readonly items: DeepAnalyzeItem[] = [],
-    @Inject('TASK_STAGE_HANDLERS') @Optional()
+    @Inject('TASK_STAGE_HANDLERS')
+    @Optional()
     private readonly handlers: TaskStageHandler[] = [],
   ) {}
 
@@ -23,14 +25,16 @@ export class DeepAnalyzeStageHandler implements TaskStageHandler {
     for (const item of this.items) {
       const required = this.getStageOutputs(item.dependsOn);
       const folder = this.storage.getTaskFolder(taskId);
-      const missing = required.find((f) => !fs.existsSync(path.join(folder, f)));
+      const missing = required.find(
+        (f) => !fs.existsSync(path.join(folder, f)),
+      );
       if (missing) {
         console.warn(
           `⚠️ Skipping deep analyze item "${item.name}" due to missing prerequisite file ${missing}`,
         );
         continue;
       }
-      await item.analyze(taskId, this.storage);
+      await item.analyze(taskId);
     }
   }
 

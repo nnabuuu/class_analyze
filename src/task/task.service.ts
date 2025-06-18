@@ -3,8 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { LocalStorageService } from '../local-storage/local-storage.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskQueueService } from './task-queue.service';
-import { FlowRunnerService, FlowStep } from './stage-handlers/flow-runner.service';
-import { TaskStage, TaskStatus } from './task.types';
+import {
+  FlowRunnerService,
+  FlowStep,
+} from './stage-handlers/flow-runner.service';
 import * as fs from 'fs';
 
 @Injectable()
@@ -95,6 +97,7 @@ export class TaskService {
       return [
         { name: 'transcript_preprocessing' },
         { name: 'task-event-analyze' },
+        { name: 'syllabus_mapping' },
         { name: 'deep_analyze' },
         { name: 'report_generation' },
       ];
@@ -103,6 +106,7 @@ export class TaskService {
     if (type === 'json_transcript') {
       return [
         { name: 'task-event-analyze' },
+        { name: 'syllabus_mapping' },
         { name: 'deep_analyze' },
         { name: 'report_generation' },
       ];

@@ -2,6 +2,7 @@ export type TaskStage =
   | 'initializing'
   | 'transcript_preprocessing'
   | 'task-event-analyze'
+  | 'syllabus_mapping'
   | 'deep_analyze'
   | 'report_generation'
   | 'done'
