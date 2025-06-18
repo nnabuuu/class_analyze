@@ -8,6 +8,7 @@ import {
   FlowStep,
 } from './stage-handlers/flow-runner.service';
 import * as fs from 'fs';
+import * as archiver from 'archiver';
 
 @Injectable()
 export class TaskService {
@@ -142,5 +143,12 @@ export class TaskService {
 
   getRawChunk(taskId: string, index: number) {
     return this.localStorage.readTextFile(taskId, `chunk_${index}.raw.txt`);
+  }
+
+  getTaskArchive(taskId: string) {
+    const folder = this.localStorage.getTaskFolder(taskId);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.directory(folder, false);
+    return archive;
   }
 }
