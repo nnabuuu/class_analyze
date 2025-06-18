@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
@@ -16,7 +16,7 @@ export class DeepAnalyzeStageHandler implements TaskStageHandler {
     @Inject('DEEP_ANALYZE_ITEMS')
     @Optional()
     private readonly items: DeepAnalyzeItem[] = [],
-    @Inject('TASK_STAGE_HANDLERS')
+    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
     @Optional()
     private readonly handlers: TaskStageHandler[] = [],
   ) {}
