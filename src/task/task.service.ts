@@ -95,12 +95,17 @@ export class TaskService {
       return [
         { name: 'transcript_preprocessing' },
         { name: 'task-event-analyze' },
+        { name: 'deep_analyze' },
         { name: 'report_generation' },
       ];
     }
 
     if (type === 'json_transcript') {
-      return [{ name: 'task-event-analyze' }, { name: 'report_generation' }];
+      return [
+        { name: 'task-event-analyze' },
+        { name: 'deep_analyze' },
+        { name: 'report_generation' },
+      ];
     }
 
     throw new Error(`Unsupported task type: ${type}`);
