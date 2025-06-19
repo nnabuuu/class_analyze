@@ -1,23 +1,33 @@
 export function extractLargestJsonBlock(content: string): string | null {
   const candidates: string[] = [];
 
-  // Match triple backtick-enclosed JSON blocks
+  // Match triple backtick-enclosed JSON blocks first
   const codeBlocks = [...content.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)];
   for (const match of codeBlocks) {
     candidates.push(match[1].trim());
   }
 
-  // Match anything that looks like an object or array
-  const genericBlocks = [...content.matchAll(/(\{[\s\S]+?\})/g)];
-  for (const match of genericBlocks) {
-    candidates.push(match[1].trim());
-  }
-  const arrayBlocks = [...content.matchAll(/(\[[\s\S]+?\])/g)];
-  for (const match of arrayBlocks) {
-    candidates.push(match[1].trim());
+  // Scan text for JSON-like sections using bracket counting
+  for (let i = 0; i < content.length; i++) {
+    const startChar = content[i];
+    if (startChar !== '{' && startChar !== '[') continue;
+    const endChar = startChar === '{' ? '}' : ']';
+    let depth = 0;
+    for (let j = i; j < content.length; j++) {
+      const ch = content[j];
+      if (ch === startChar) depth++;
+      if (ch === endChar) {
+        depth--;
+        if (depth === 0) {
+          const candidate = content.slice(i, j + 1).trim();
+          candidates.push(candidate);
+          break;
+        }
+      }
+    }
   }
 
-  // Try to parse all and return the largest valid one
+  // Try to parse all candidates and return the largest valid one
   let best: string | null = null;
   let bestSize = 0;
 
@@ -30,7 +40,7 @@ export function extractLargestJsonBlock(content: string): string | null {
         bestSize = size;
       }
     } catch {
-      continue;
+      // ignore invalid candidates
     }
   }
 
