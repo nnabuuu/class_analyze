@@ -108,5 +108,4 @@ export class SyllabusMappingStageHandler extends StageHandlerBase implements Tas
       return { error: 'Failed to parse GPT response', raw: content };
     }
   }
-
 }

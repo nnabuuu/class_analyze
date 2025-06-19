@@ -151,5 +151,4 @@ ${JSON.stringify(chunk, null, 2)}
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
-
 }

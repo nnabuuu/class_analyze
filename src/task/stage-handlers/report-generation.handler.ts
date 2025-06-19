@@ -96,5 +96,4 @@ export class ReportGenerationStageHandler extends StageHandlerBase implements Ta
     );
     fs.writeFileSync(reportPath, lines.join('\n'), 'utf-8');
   }
-
 }

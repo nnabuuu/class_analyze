@@ -42,5 +42,4 @@ export class DeepAnalyzeStageHandler extends StageHandlerBase implements TaskSta
       await item.analyze(taskId);
     }
   }
-
 }
