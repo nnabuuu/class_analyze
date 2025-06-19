@@ -4,6 +4,7 @@ import * as path from 'path';
 import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
 import { TaskStageHandler } from './stage-handler.interface';
+import { StageHandlerBase } from './stage-handler.base';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { TranscriptProcessingStageHandler } from './transcript-processing.stage-handler';
 import { extractLargestJsonBlock } from '../../utils';
@@ -20,14 +21,16 @@ const chunkSize = parseInt(process.env.CHUNK_SIZE || '300', 10);
 const overlap = parseInt(process.env.OVERLAP || '30', 10);
 
 @Injectable()
-export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
+export class TaskEventAnalyzeStageHandler extends StageHandlerBase implements TaskStageHandler {
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
     @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
     @Optional()
-    private readonly handlers: TaskStageHandler[] = [],
-  ) {}
+    handlers: TaskStageHandler[] = [],
+  ) {
+    super(handlers);
+  }
 
   readonly stage: TaskStage = 'task-event-analyze';
   readonly outputFiles = ['task_events.json'];
@@ -147,18 +150,5 @@ ${JSON.stringify(chunk, null, 2)}
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  private getStageOutputs(
-    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
-  ): string[] {
-    if (!stages) return [];
-    const deps = Array.isArray(stages) ? stages : [stages];
-    const outputs: string[] = [];
-    for (const dep of deps) {
-      const handler = this.handlers.find((h) => h instanceof dep);
-      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
-    }
-    return outputs;
   }
 }
