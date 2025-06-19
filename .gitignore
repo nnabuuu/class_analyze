@@ -20,7 +20,7 @@ logs/
 .kedge-tech/
 output*.json
 batches/
-output_tasks_report.md
+tasks_report.md
 
 # OS junk
 .DS_Store

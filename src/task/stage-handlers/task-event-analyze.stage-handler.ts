@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
 import { TaskStageHandler } from './stage-handler.interface';
+import { StageHandlerBase } from './stage-handler.base';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
+import { TranscriptProcessingStageHandler } from './transcript-processing.stage-handler';
 import { extractLargestJsonBlock } from '../../utils';
 import { TaskStage } from '../task.types';
 import {
@@ -19,17 +21,24 @@ const chunkSize = parseInt(process.env.CHUNK_SIZE || '300', 10);
 const overlap = parseInt(process.env.OVERLAP || '30', 10);
 
 @Injectable()
-export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
+export class TaskEventAnalyzeStageHandler extends StageHandlerBase implements TaskStageHandler {
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
-  ) {}
+    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
+    @Optional()
+    handlers: TaskStageHandler[] = [],
+  ) {
+    super(handlers);
+  }
 
   readonly stage: TaskStage = 'task-event-analyze';
-  readonly outputFiles = ['output_tasks.json'];
+  readonly outputFiles = ['task_events.json'];
+  readonly dependsOn = [TranscriptProcessingStageHandler];
 
   async handle(taskId: string): Promise<void> {
-    const transcriptRaw = this.localStorage.readJsonSafe(taskId, 'input.json');
+    const [prevFile] = this.getStageOutputs(this.dependsOn);
+    const transcriptRaw = this.localStorage.readJsonSafe(taskId, prevFile);
     const transcript = TranscriptProcessingOutputSchema.parse(transcriptRaw);
     await this._process(taskId, transcript);
   }
@@ -89,7 +98,7 @@ export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
     }
 
     const validated = TaskEventAnalyzeOutputSchema.parse(allChunks);
-    const mergedPath = path.join(taskFolder, 'output_tasks.json');
+    const mergedPath = path.join(taskFolder, 'task_events.json');
     fs.writeFileSync(mergedPath, JSON.stringify(validated, null, 2), 'utf-8');
 
     return validated;
@@ -142,4 +151,5 @@ ${JSON.stringify(chunk, null, 2)}
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+
 }

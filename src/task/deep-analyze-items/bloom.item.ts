@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { DeepAnalyzeItem } from '../stage-handlers/deep-analyze-item.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
+import { TaskEventAnalyzeStageHandler } from '../stage-handlers/task-event-analyze.stage-handler';
 import { extractLargestJsonBlock } from '../../utils';
 import {
   TaskEventAnalyzeOutputSchema,
@@ -24,8 +25,8 @@ const SYSTEM_PROMPT_OVERALL = `你是一位教育分析专家，请基于多个�
 @Injectable()
 export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
   readonly name = 'bloom-taxonomy';
-  readonly dependsOn = 'task-event-analyze' as const;
-  readonly outputFiles = ['bloom_analysis.json'];
+  readonly dependsOn = [TaskEventAnalyzeStageHandler];
+  readonly outputFiles = ['bloom_taxonomy.json'];
 
   constructor(
     private readonly config: ConfigService,
@@ -37,7 +38,7 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
   });
 
   async analyze(taskId: string): Promise<void> {
-    const tasksRaw = this.storage.readJson(taskId, 'output_tasks.json');
+    const tasksRaw = this.storage.readJson(taskId, 'task_events.json');
     const tasks = TaskEventAnalyzeOutputSchema.parse(tasksRaw);
     const eventResults: BloomEventResult[] = [];
     const taskSummaries: BloomTaskSummary[] = [];

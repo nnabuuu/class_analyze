@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -6,7 +6,9 @@ import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { ConfigService } from '@nestjs/config';
 import { extractLargestJsonBlock } from '../../utils';
 import { TaskStageHandler } from './stage-handler.interface';
+import { StageHandlerBase } from './stage-handler.base';
 import { TaskStage } from '../task.types';
+import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
 import {
   TaskEventAnalyzeOutputSchema,
   SyllabusMappingOutput,
@@ -14,9 +16,10 @@ import {
 } from '../../models';
 
 @Injectable()
-export class SyllabusMappingStageHandler implements TaskStageHandler {
+export class SyllabusMappingStageHandler extends StageHandlerBase implements TaskStageHandler {
   stage: TaskStage = 'syllabus_mapping';
-  readonly outputFiles = ['mapped_syllabus.json'];
+  readonly outputFiles = ['syllabus_mapping.json'];
+  readonly dependsOn = [TaskEventAnalyzeStageHandler];
 
   private readonly openai = new OpenAI({
     apiKey: this.config.get('OPENAI_API_KEY'),
@@ -25,11 +28,17 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
-  ) {}
+    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
+    @Optional()
+    handlers: TaskStageHandler[] = [],
+  ) {
+    super(handlers);
+  }
 
   async handle(taskId: string): Promise<void> {
+    const [prevFile] = this.getStageOutputs(this.dependsOn);
     const tasksRaw = JSON.parse(
-      this.localStorage.readTextFile(taskId, 'output_tasks.json'),
+      this.localStorage.readTextFile(taskId, prevFile),
     );
     const tasks = TaskEventAnalyzeOutputSchema.parse(tasksRaw);
 
@@ -73,7 +82,7 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
 
     this.localStorage.saveFile(
       taskId,
-      'mapped_syllabus.json',
+      'syllabus_mapping.json',
       JSON.stringify(validated, null, 2),
     );
   }
@@ -99,4 +108,5 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
       return { error: 'Failed to parse GPT response', raw: content };
     }
   }
+
 }

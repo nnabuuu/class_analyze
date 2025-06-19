@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { DeepAnalyzeItem } from '../stage-handlers/deep-analyze-item.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
+import { TaskEventAnalyzeStageHandler } from '../stage-handlers/task-event-analyze.stage-handler';
 import { extractLargestJsonBlock } from '../../utils';
 import {
   TaskEventAnalyzeOutputSchema,
@@ -18,8 +19,8 @@ const SYSTEM_PROMPT = `你是一位 ICAP 模式分析专家，依据提供的课
 @Injectable()
 export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
   readonly name = 'icap-analysis';
-  readonly dependsOn = 'task-event-analyze' as const;
-  readonly outputFiles = ['icap_analysis.json'];
+  readonly dependsOn = [TaskEventAnalyzeStageHandler];
+  readonly outputFiles = ['icap_modes.json'];
 
   constructor(
     private readonly config: ConfigService,
@@ -31,7 +32,7 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
   });
 
   async analyze(taskId: string): Promise<void> {
-    const tasksRaw = this.storage.readJson(taskId, 'output_tasks.json');
+    const tasksRaw = this.storage.readJson(taskId, 'task_events.json');
     const tasks = TaskEventAnalyzeOutputSchema.parse(tasksRaw);
     const results: ICAPResult[] = [];
 
