@@ -24,7 +24,7 @@ export class TaskService {
     const taskId = uuidv4();
     this.localStorage.saveFile(
       taskId,
-      'input.json',
+      'cleaned_transcript.json',
       JSON.stringify(dto.transcript, null, 2),
     );
     this.localStorage.saveProgress(
@@ -122,11 +122,11 @@ export class TaskService {
   }
 
   getTaskResult(taskId: string) {
-    return this.localStorage.readJsonSafe(taskId, 'output_tasks.json');
+    return this.localStorage.readJsonSafe(taskId, 'task_events.json');
   }
 
   getTaskReport(taskId: string) {
-    return this.localStorage.readTextFile(taskId, 'output_tasks_report.md');
+    return this.localStorage.readTextFile(taskId, 'tasks_report.md');
   }
 
   getTaskChunks(taskId: string): string[] {

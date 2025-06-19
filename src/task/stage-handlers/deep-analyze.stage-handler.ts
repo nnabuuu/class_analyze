@@ -5,11 +5,13 @@ import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { TaskStage } from '../task.types';
 import { TaskStageHandler } from './stage-handler.interface';
 import { DeepAnalyzeItem } from './deep-analyze-item.interface';
+import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
 
 @Injectable()
 export class DeepAnalyzeStageHandler implements TaskStageHandler {
   readonly stage: TaskStage = 'deep_analyze';
   readonly outputFiles: string[] = [];
+  readonly dependsOn = [TaskEventAnalyzeStageHandler];
 
   constructor(
     private readonly storage: LocalStorageService,
@@ -38,8 +40,16 @@ export class DeepAnalyzeStageHandler implements TaskStageHandler {
     }
   }
 
-  private getStageOutputs(stage: TaskStage): string[] {
-    const handler = this.handlers.find((h) => h.stage === stage);
-    return handler?.outputFiles ?? [];
+  private getStageOutputs(
+    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
+  ): string[] {
+    if (!stages) return [];
+    const deps = Array.isArray(stages) ? stages : [stages];
+    const outputs: string[] = [];
+    for (const dep of deps) {
+      const handler = this.handlers.find((h) => h instanceof dep);
+      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
+    }
+    return outputs;
   }
 }
