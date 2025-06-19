@@ -6,6 +6,7 @@ import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { ConfigService } from '@nestjs/config';
 import { extractLargestJsonBlock } from '../../utils';
 import { TaskStageHandler } from './stage-handler.interface';
+import { StageHandlerBase } from './stage-handler.base';
 import { TaskStage } from '../task.types';
 import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
 import {
@@ -15,7 +16,7 @@ import {
 } from '../../models';
 
 @Injectable()
-export class SyllabusMappingStageHandler implements TaskStageHandler {
+export class SyllabusMappingStageHandler extends StageHandlerBase implements TaskStageHandler {
   stage: TaskStage = 'syllabus_mapping';
   readonly outputFiles = ['syllabus_mapping.json'];
   readonly dependsOn = [TaskEventAnalyzeStageHandler];
@@ -29,8 +30,10 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
     private readonly config: ConfigService,
     @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
     @Optional()
-    private readonly handlers: TaskStageHandler[] = [],
-  ) {}
+    handlers: TaskStageHandler[] = [],
+  ) {
+    super(handlers);
+  }
 
   async handle(taskId: string): Promise<void> {
     const [prevFile] = this.getStageOutputs(this.dependsOn);
@@ -106,16 +109,4 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
     }
   }
 
-  private getStageOutputs(
-    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
-  ): string[] {
-    if (!stages) return [];
-    const deps = Array.isArray(stages) ? stages : [stages];
-    const outputs: string[] = [];
-    for (const dep of deps) {
-      const handler = this.handlers.find((h) => h instanceof dep);
-      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
-    }
-    return outputs;
-  }
 }

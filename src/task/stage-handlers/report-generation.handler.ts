@@ -1,5 +1,6 @@
 import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import { TaskStageHandler } from './stage-handler.interface';
+import { StageHandlerBase } from './stage-handler.base';
 import { TaskStage } from '../task.types';
 import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
@@ -8,7 +9,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 @Injectable()
-export class ReportGenerationStageHandler implements TaskStageHandler {
+export class ReportGenerationStageHandler extends StageHandlerBase implements TaskStageHandler {
   readonly stage = 'report_generation';
   readonly outputFiles = ['tasks_report.md'];
   readonly dependsOn = [TaskEventAnalyzeStageHandler];
@@ -20,8 +21,10 @@ export class ReportGenerationStageHandler implements TaskStageHandler {
     private readonly deepAnalyzeItems: DeepAnalyzeItem[] = [],
     @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
     @Optional()
-    private readonly handlers: TaskStageHandler[] = [],
-  ) {}
+    handlers: TaskStageHandler[] = [],
+  ) {
+    super(handlers);
+  }
 
   async handle(taskId: string): Promise<void> {
     const [prevFile] = this.getStageOutputs(this.dependsOn);
@@ -94,16 +97,4 @@ export class ReportGenerationStageHandler implements TaskStageHandler {
     fs.writeFileSync(reportPath, lines.join('\n'), 'utf-8');
   }
 
-  private getStageOutputs(
-    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
-  ): string[] {
-    if (!stages) return [];
-    const deps = Array.isArray(stages) ? stages : [stages];
-    const outputs: string[] = [];
-    for (const dep of deps) {
-      const handler = this.handlers.find((h) => h instanceof dep);
-      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
-    }
-    return outputs;
-  }
 }
