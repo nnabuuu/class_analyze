@@ -4,15 +4,13 @@ import OpenAI from 'openai';
 import { DeepAnalyzeItem } from '../stage-handlers/deep-analyze-item.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { extractLargestJsonBlock } from '../../utils';
-
-export interface ICAPResult {
-  start: number;
-  end: number;
-  text: string;
-  ICAP_mode: 'Passive' | 'Active' | 'Constructive' | 'Interactive';
-  reasoning: string;
-  confidence: number;
-}
+import {
+  TaskEventAnalyzeOutputSchema,
+  ICAPAnalysis,
+  ICAPAnalysisSchema,
+  ICAPResult,
+  ICAPResultSchema,
+} from '../../models';
 
 const modelName = process.env.MODEL || 'gpt-4o';
 const SYSTEM_PROMPT = `你是一位 ICAP 模式分析专家，依据提供的课堂片段信息判断其主要的 ICAP 模式。ICAP 模式只能从以下四个中选择：Passive、Active、Constructive、Interactive。请输出严格的 JSON 对象，格式如下：\n{\n  "ICAP_mode": "Passive|Active|Constructive|Interactive",\n  "reasoning": "简要说明理由",\n  "confidence": 0.8\n}`;
@@ -33,7 +31,8 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
   });
 
   async analyze(taskId: string): Promise<void> {
-    const tasks = this.storage.readJson(taskId, 'output_tasks.json');
+    const tasksRaw = this.storage.readJson(taskId, 'output_tasks.json');
+    const tasks = TaskEventAnalyzeOutputSchema.parse(tasksRaw);
     const results: ICAPResult[] = [];
 
     for (const task of tasks) {
@@ -44,10 +43,12 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
       }
     }
 
+    const validated: ICAPAnalysis = ICAPAnalysisSchema.parse(results);
+
     this.storage.saveFile(
       taskId,
       this.outputFiles[0],
-      JSON.stringify(results, null, 2),
+      JSON.stringify(validated, null, 2),
     );
   }
 
@@ -75,16 +76,16 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
         const raw = response.choices[0].message.content?.trim() || '';
         const cleaned = extractLargestJsonBlock(raw);
         if (!cleaned) throw new Error('Empty response');
-        const parsed = JSON.parse(cleaned);
+        const parsed = ICAPResultSchema.parse(JSON.parse(cleaned));
 
-        return {
+        return ICAPResultSchema.parse({
           start,
           end,
           text,
           ICAP_mode: parsed.ICAP_mode,
           reasoning: parsed.reasoning,
           confidence: parsed.confidence,
-        } as ICAPResult;
+        });
       } catch (err) {
         if (attempt === 3) console.error('ICAP analysis failed:', err);
         await this.sleep(1000);

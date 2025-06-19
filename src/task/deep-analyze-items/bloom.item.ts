@@ -4,44 +4,17 @@ import OpenAI from 'openai';
 import { DeepAnalyzeItem } from '../stage-handlers/deep-analyze-item.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { extractLargestJsonBlock } from '../../utils';
-
-export interface BloomEventResult {
-  start: number;
-  end: number;
-  text: string;
-  bloom_level:
-    | 'Remember'
-    | 'Understand'
-    | 'Apply'
-    | 'Analyze'
-    | 'Evaluate'
-    | 'Create';
-  reasoning: string;
-  confidence: number;
-}
-
-export interface BloomTaskSummary {
-  task_title: string;
-  summary: string;
-  predominant_level:
-    | 'Remember'
-    | 'Understand'
-    | 'Apply'
-    | 'Analyze'
-    | 'Evaluate'
-    | 'Create';
-}
-
-export interface BloomOverallSummary {
-  overall_summary: string;
-  predominant_level:
-    | 'Remember'
-    | 'Understand'
-    | 'Apply'
-    | 'Analyze'
-    | 'Evaluate'
-    | 'Create';
-}
+import {
+  TaskEventAnalyzeOutputSchema,
+  BloomEventResult,
+  BloomEventResultSchema,
+  BloomTaskSummary,
+  BloomTaskSummarySchema,
+  BloomOverallSummary,
+  BloomOverallSummarySchema,
+  BloomAnalysis,
+  BloomAnalysisSchema,
+} from '../../models';
 
 const modelName = process.env.MODEL || 'gpt-4o';
 const SYSTEM_PROMPT_EVENT = `你是一位教育分析专家，依据提供的课堂片段信息，判断其主要针对的 Bloom 认知层次。只能从以下六个层次中选择：Remember、Understand、Apply、Analyze、Evaluate、Create。请严格按照以下 JSON 格式回复：\n{\n  "bloom_level": "Remember|Understand|Apply|Analyze|Evaluate|Create",\n  "reasoning": "简要说明理由",\n  "confidence": 0.8\n}`;
@@ -64,7 +37,8 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
   });
 
   async analyze(taskId: string): Promise<void> {
-    const tasks = this.storage.readJson(taskId, 'output_tasks.json');
+    const tasksRaw = this.storage.readJson(taskId, 'output_tasks.json');
+    const tasks = TaskEventAnalyzeOutputSchema.parse(tasksRaw);
     const eventResults: BloomEventResult[] = [];
     const taskSummaries: BloomTaskSummary[] = [];
 
@@ -86,10 +60,16 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
 
     const overall = await this.summarizeOverall(taskSummaries);
 
+    const analysis: BloomAnalysis = BloomAnalysisSchema.parse({
+      eventResults,
+      taskSummaries,
+      overall,
+    });
+
     this.storage.saveFile(
       taskId,
       this.outputFiles[0],
-      JSON.stringify({ eventResults, taskSummaries, overall }, null, 2),
+      JSON.stringify(analysis, null, 2),
     );
   }
 
@@ -117,16 +97,20 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
         const raw = response.choices[0].message.content?.trim() || '';
         const cleaned = extractLargestJsonBlock(raw);
         if (!cleaned) throw new Error('Empty response');
-        const parsed = JSON.parse(cleaned);
+        const parsed = BloomEventResultSchema.omit({
+          start: true,
+          end: true,
+          text: true,
+        }).parse(JSON.parse(cleaned));
 
-        return {
+        return BloomEventResultSchema.parse({
           start,
           end,
           text,
           bloom_level: parsed.bloom_level,
           reasoning: parsed.reasoning,
           confidence: parsed.confidence,
-        } as BloomEventResult;
+        });
       } catch (err) {
         if (attempt === 3) console.error('Bloom analysis failed:', err);
         await this.sleep(1000);
@@ -169,12 +153,8 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
         const raw = resp.choices[0].message.content?.trim() || '';
         const cleaned = extractLargestJsonBlock(raw);
         if (!cleaned) throw new Error('Empty response');
-        const parsed = JSON.parse(cleaned);
-        return {
-          task_title: parsed.task_title,
-          summary: parsed.summary,
-          predominant_level: parsed.predominant_level,
-        } as BloomTaskSummary;
+        const parsed = BloomTaskSummarySchema.parse(JSON.parse(cleaned));
+        return parsed;
       } catch (err) {
         if (attempt === 3) console.error('Bloom task summary failed:', err);
         await this.sleep(1000);
@@ -202,11 +182,8 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
         const raw = resp.choices[0].message.content?.trim() || '';
         const cleaned = extractLargestJsonBlock(raw);
         if (!cleaned) throw new Error('Empty response');
-        const parsed = JSON.parse(cleaned);
-        return {
-          overall_summary: parsed.overall_summary,
-          predominant_level: parsed.predominant_level,
-        } as BloomOverallSummary;
+        const parsed = BloomOverallSummarySchema.parse(JSON.parse(cleaned));
+        return parsed;
       } catch (err) {
         if (attempt === 3) console.error('Bloom overall summary failed:', err);
         await this.sleep(1000);

@@ -7,6 +7,10 @@ import { ConfigService } from '@nestjs/config';
 import { extractLargestJsonBlock } from '../../utils';
 import { TaskStageHandler } from './stage-handler.interface';
 import { TaskStage } from '../task.types';
+import {
+  TranscriptProcessingOutput,
+  TranscriptProcessingOutputSchema,
+} from '../../models';
 
 const modelName = process.env.MODEL || 'gpt-4o';
 const batchSize = parseInt(process.env.BATCH_SIZE || '100', 10);
@@ -36,7 +40,7 @@ export class TranscriptProcessingStageHandler implements TaskStageHandler {
   async _runTranscriptCleaning(
     taskId: string,
     transcriptText: string,
-  ): Promise<string[]> {
+  ): Promise<TranscriptProcessingOutput> {
     const taskPath = this.localStorage.getTaskFolder(taskId);
     const segments = transcriptText.split(/\n(?=\d+\.\ds\s*-\s*\d+\.\ds:)/g);
     const batches = Math.ceil(segments.length / batchSize);
@@ -45,7 +49,9 @@ export class TranscriptProcessingStageHandler implements TaskStageHandler {
     for (let i = 0; i < batches; i++) {
       const rawFile = path.join(taskPath, `batch_${i + 1}.json`);
       if (fs.existsSync(rawFile)) {
-        const parsed = JSON.parse(fs.readFileSync(rawFile, 'utf-8'));
+        const parsed = TranscriptProcessingOutputSchema.parse(
+          JSON.parse(fs.readFileSync(rawFile, 'utf-8')),
+        );
         allResults.push(...parsed);
         continue;
       }
@@ -74,7 +80,9 @@ export class TranscriptProcessingStageHandler implements TaskStageHandler {
           }
           console.log(cleaned);
 
-          const parsed = JSON.parse(cleaned);
+          const parsed = TranscriptProcessingOutputSchema.parse(
+            JSON.parse(cleaned),
+          );
           fs.writeFileSync(rawFile, JSON.stringify(parsed, null, 2), 'utf-8');
           allResults.push(...parsed);
           break;
@@ -88,9 +96,10 @@ export class TranscriptProcessingStageHandler implements TaskStageHandler {
       await new Promise((r) => setTimeout(r, 1000));
     }
 
+    const validated = TranscriptProcessingOutputSchema.parse(allResults);
     const outputPath = path.join(taskPath, 'output.json');
-    fs.writeFileSync(outputPath, JSON.stringify(allResults, null, 2), 'utf-8');
-    return allResults;
+    fs.writeFileSync(outputPath, JSON.stringify(validated, null, 2), 'utf-8');
+    return validated;
   }
 
   private generatePrompt(batchText: string): string {
