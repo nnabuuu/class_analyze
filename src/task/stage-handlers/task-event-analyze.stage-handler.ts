@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
 import { TaskStageHandler } from './stage-handler.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
+import { TranscriptProcessingStageHandler } from './transcript-processing.stage-handler';
 import { extractLargestJsonBlock } from '../../utils';
 import { TaskStage } from '../task.types';
 import {
@@ -23,13 +24,18 @@ export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
+    @Optional()
+    private readonly handlers: TaskStageHandler[] = [],
   ) {}
 
   readonly stage: TaskStage = 'task-event-analyze';
-  readonly outputFiles = ['output_tasks.json'];
+  readonly outputFiles = ['task_events.json'];
+  readonly dependsOn = [TranscriptProcessingStageHandler];
 
   async handle(taskId: string): Promise<void> {
-    const transcriptRaw = this.localStorage.readJsonSafe(taskId, 'input.json');
+    const [prevFile] = this.getStageOutputs(this.dependsOn);
+    const transcriptRaw = this.localStorage.readJsonSafe(taskId, prevFile);
     const transcript = TranscriptProcessingOutputSchema.parse(transcriptRaw);
     await this._process(taskId, transcript);
   }
@@ -89,7 +95,7 @@ export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
     }
 
     const validated = TaskEventAnalyzeOutputSchema.parse(allChunks);
-    const mergedPath = path.join(taskFolder, 'output_tasks.json');
+    const mergedPath = path.join(taskFolder, 'task_events.json');
     fs.writeFileSync(mergedPath, JSON.stringify(validated, null, 2), 'utf-8');
 
     return validated;
@@ -141,5 +147,18 @@ ${JSON.stringify(chunk, null, 2)}
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private getStageOutputs(
+    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
+  ): string[] {
+    if (!stages) return [];
+    const deps = Array.isArray(stages) ? stages : [stages];
+    const outputs: string[] = [];
+    for (const dep of deps) {
+      const handler = this.handlers.find((h) => h instanceof dep);
+      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
+    }
+    return outputs;
   }
 }

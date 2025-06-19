@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { extractLargestJsonBlock } from '../../utils';
 import { TaskStageHandler } from './stage-handler.interface';
 import { TaskStage } from '../task.types';
+import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
 import {
   TaskEventAnalyzeOutputSchema,
   SyllabusMappingOutput,
@@ -16,7 +17,8 @@ import {
 @Injectable()
 export class SyllabusMappingStageHandler implements TaskStageHandler {
   stage: TaskStage = 'syllabus_mapping';
-  readonly outputFiles = ['mapped_syllabus.json'];
+  readonly outputFiles = ['syllabus_mapping.json'];
+  readonly dependsOn = [TaskEventAnalyzeStageHandler];
 
   private readonly openai = new OpenAI({
     apiKey: this.config.get('OPENAI_API_KEY'),
@@ -25,11 +27,15 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
+    @Optional()
+    private readonly handlers: TaskStageHandler[] = [],
   ) {}
 
   async handle(taskId: string): Promise<void> {
+    const [prevFile] = this.getStageOutputs(this.dependsOn);
     const tasksRaw = JSON.parse(
-      this.localStorage.readTextFile(taskId, 'output_tasks.json'),
+      this.localStorage.readTextFile(taskId, prevFile),
     );
     const tasks = TaskEventAnalyzeOutputSchema.parse(tasksRaw);
 
@@ -73,7 +79,7 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
 
     this.localStorage.saveFile(
       taskId,
-      'mapped_syllabus.json',
+      'syllabus_mapping.json',
       JSON.stringify(validated, null, 2),
     );
   }
@@ -98,5 +104,18 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
     } catch (e) {
       return { error: 'Failed to parse GPT response', raw: content };
     }
+  }
+
+  private getStageOutputs(
+    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
+  ): string[] {
+    if (!stages) return [];
+    const deps = Array.isArray(stages) ? stages : [stages];
+    const outputs: string[] = [];
+    for (const dep of deps) {
+      const handler = this.handlers.find((h) => h instanceof dep);
+      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
+    }
+    return outputs;
   }
 }

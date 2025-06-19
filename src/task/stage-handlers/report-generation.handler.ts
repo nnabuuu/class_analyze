@@ -1,5 +1,7 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import { TaskStageHandler } from './stage-handler.interface';
+import { TaskStage } from '../task.types';
+import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { DeepAnalyzeItem } from './deep-analyze-item.interface';
 import * as path from 'path';
@@ -8,17 +10,22 @@ import * as fs from 'fs';
 @Injectable()
 export class ReportGenerationStageHandler implements TaskStageHandler {
   readonly stage = 'report_generation';
-  readonly outputFiles = ['output_tasks_report.md'];
+  readonly outputFiles = ['tasks_report.md'];
+  readonly dependsOn = [TaskEventAnalyzeStageHandler];
 
   constructor(
     private readonly localStorage: LocalStorageService,
     @Inject('DEEP_ANALYZE_ITEMS')
     @Optional()
     private readonly deepAnalyzeItems: DeepAnalyzeItem[] = [],
+    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
+    @Optional()
+    private readonly handlers: TaskStageHandler[] = [],
   ) {}
 
   async handle(taskId: string): Promise<void> {
-    const tasks = this.localStorage.readJson(taskId, 'output_tasks.json');
+    const [prevFile] = this.getStageOutputs(this.dependsOn);
+    const tasks = this.localStorage.readJson(taskId, prevFile);
 
     const lines: string[] = [];
     lines.push('# 课堂结构报告');
@@ -82,8 +89,21 @@ export class ReportGenerationStageHandler implements TaskStageHandler {
 
     const reportPath = path.join(
       this.localStorage.getTaskFolder(taskId),
-      'output_tasks_report.md',
+      'tasks_report.md',
     );
     fs.writeFileSync(reportPath, lines.join('\n'), 'utf-8');
+  }
+
+  private getStageOutputs(
+    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
+  ): string[] {
+    if (!stages) return [];
+    const deps = Array.isArray(stages) ? stages : [stages];
+    const outputs: string[] = [];
+    for (const dep of deps) {
+      const handler = this.handlers.find((h) => h instanceof dep);
+      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
+    }
+    return outputs;
   }
 }
