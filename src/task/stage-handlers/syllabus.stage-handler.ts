@@ -7,6 +7,11 @@ import { ConfigService } from '@nestjs/config';
 import { extractLargestJsonBlock } from '../../utils';
 import { TaskStageHandler } from './stage-handler.interface';
 import { TaskStage } from '../task.types';
+import {
+  TaskEventAnalyzeOutputSchema,
+  SyllabusMappingOutput,
+  SyllabusMappingOutputSchema,
+} from '../../models';
 
 @Injectable()
 export class SyllabusMappingStageHandler implements TaskStageHandler {
@@ -23,9 +28,10 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
   ) {}
 
   async handle(taskId: string): Promise<void> {
-    const tasks = JSON.parse(
+    const tasksRaw = JSON.parse(
       this.localStorage.readTextFile(taskId, 'output_tasks.json'),
     );
+    const tasks = TaskEventAnalyzeOutputSchema.parse(tasksRaw);
 
     const syllabusPath = path.join(
       __dirname,
@@ -33,7 +39,7 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
     );
     const syllabusItems = JSON.parse(fs.readFileSync(syllabusPath, 'utf-8'));
 
-    const results = [];
+    const results: SyllabusMappingOutput = [];
 
     for (const task of tasks) {
       const selectedItems = this.filterRelevantItems(
@@ -63,10 +69,12 @@ export class SyllabusMappingStageHandler implements TaskStageHandler {
       });
     }
 
+    const validated = SyllabusMappingOutputSchema.parse(results);
+
     this.localStorage.saveFile(
       taskId,
       'mapped_syllabus.json',
-      JSON.stringify(results, null, 2),
+      JSON.stringify(validated, null, 2),
     );
   }
 

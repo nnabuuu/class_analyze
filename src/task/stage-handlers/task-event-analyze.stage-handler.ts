@@ -7,6 +7,12 @@ import { TaskStageHandler } from './stage-handler.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { extractLargestJsonBlock } from '../../utils';
 import { TaskStage } from '../task.types';
+import {
+  TranscriptProcessingOutput,
+  TranscriptProcessingOutputSchema,
+  TaskEventAnalyzeOutput,
+  TaskEventAnalyzeOutputSchema,
+} from '../../models';
 
 const modelName = process.env.MODEL || 'gpt-4o';
 const chunkSize = parseInt(process.env.CHUNK_SIZE || '300', 10);
@@ -23,7 +29,8 @@ export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
   readonly outputFiles = ['output_tasks.json'];
 
   async handle(taskId: string): Promise<void> {
-    const transcript = this.localStorage.readJsonSafe(taskId, 'input.json');
+    const transcriptRaw = this.localStorage.readJsonSafe(taskId, 'input.json');
+    const transcript = TranscriptProcessingOutputSchema.parse(transcriptRaw);
     await this._process(taskId, transcript);
   }
 
@@ -33,8 +40,8 @@ export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
 
   private async _process(
     taskId: string,
-    transcriptJson: any[],
-  ): Promise<string> {
+    transcriptJson: TranscriptProcessingOutput,
+  ): Promise<TaskEventAnalyzeOutput> {
     const taskFolder = this.localStorage.getTaskFolder(taskId);
     const batchesDir = path.join(taskFolder, 'batches');
     if (!fs.existsSync(batchesDir))
@@ -70,7 +77,7 @@ export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
       fs.writeFileSync(rawFilePath, rawContent, 'utf-8');
 
       const cleaned = extractLargestJsonBlock(rawContent);
-      const parsed = JSON.parse(cleaned);
+      const parsed = TaskEventAnalyzeOutputSchema.parse(JSON.parse(cleaned));
       const cleanFilePath = path.join(
         batchesDir,
         `task_chunk_${chunkIndex + 1}.json`,
@@ -81,10 +88,11 @@ export class TaskEventAnalyzeStageHandler implements TaskStageHandler {
       await this.sleep(1000); // rate limit buffer
     }
 
+    const validated = TaskEventAnalyzeOutputSchema.parse(allChunks);
     const mergedPath = path.join(taskFolder, 'output_tasks.json');
-    fs.writeFileSync(mergedPath, JSON.stringify(allChunks, null, 2), 'utf-8');
+    fs.writeFileSync(mergedPath, JSON.stringify(validated, null, 2), 'utf-8');
 
-    return mergedPath;
+    return validated;
   }
 
   private buildUserPrompt(chunk: any[]): string {
