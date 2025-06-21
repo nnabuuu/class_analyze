@@ -15,9 +15,8 @@ import type { TaskStageHandler } from './stage-handler.interface';
  * {@link TaskStageHandler} interface.
  */
 
-export type StageHandlerCtor<T extends TaskStageHandler = TaskStageHandler> = new (
-  ...args: any[]
-) => T;
+export type StageHandlerCtor<T extends TaskStageHandler = TaskStageHandler> =
+  new (...args: any[]) => T;
 
 export abstract class StageHandlerBase implements TaskStageHandler {
   static stage: TaskStage;
