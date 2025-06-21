@@ -9,6 +9,7 @@ import {
 } from './stage-handlers/flow-runner.service';
 import * as fs from 'fs';
 import * as archiver from 'archiver';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class TaskService {
@@ -68,6 +69,7 @@ export class TaskService {
     const { taskId, type } = task;
 
     try {
+      this.localStorage.appendLog(taskId, `Task started: ${type}`);
       this.localStorage.saveProgress(
         taskId,
         'initializing',
@@ -86,9 +88,11 @@ export class TaskService {
         'All stages completed',
         'completed',
       );
+      this.localStorage.appendLog(taskId, 'Task completed');
     } catch (err) {
       console.error(`❌ Task ${taskId} failed:`, err.message);
       this.localStorage.saveProgress(taskId, 'error', 1, err.message, 'failed');
+      this.localStorage.appendLog(taskId, `Task failed: ${err.message}`);
     }
   }
 
@@ -150,5 +154,46 @@ export class TaskService {
     const archive = archiver('zip', { zlib: { level: 9 } });
     archive.directory(folder, false);
     return archive;
+  }
+
+  watchTaskProgress(taskId: string): Observable<any> {
+    return new Observable((subscriber) => {
+      const file = this.localStorage.getProgressFilePath(taskId);
+
+      const emit = () => {
+        const data = this.getTaskStatus(taskId);
+        if (data) subscriber.next(data);
+      };
+
+      emit();
+
+      const watcher = fs.watch(file, emit);
+
+      return () => {
+        watcher.close();
+      };
+    });
+  }
+
+  watchTaskLog(taskId: string): Observable<string> {
+    return new Observable((subscriber) => {
+      const file = this.localStorage.getLogFilePath(taskId);
+
+      if (!fs.existsSync(file)) fs.writeFileSync(file, '');
+
+      const emit = () => {
+        if (fs.existsSync(file)) {
+          subscriber.next(fs.readFileSync(file, 'utf-8'));
+        }
+      };
+
+      emit();
+
+      const watcher = fs.watch(file, emit);
+
+      return () => {
+        watcher.close();
+      };
+    });
   }
 }

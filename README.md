@@ -32,6 +32,12 @@
 $ npm install
 ```
 
+## Project Structure
+
+- `backend/` - NestJS API server
+- `cli/` - command line interface
+
+
 ## Running the app
 
 ```bash
@@ -57,6 +63,19 @@ $ npm run test:e2e
 # test coverage
 $ npm run test:cov
 ```
+
+## CLI Usage
+
+Install dependencies inside the `cli` folder and run:
+
+```bash
+$ npm install --prefix cli
+# submit a transcript
+$ node cli/index.js submit path/to/file.txt
+# watch progress
+$ node cli/index.js watch <taskId>
+```
+
 
 ## Support
 

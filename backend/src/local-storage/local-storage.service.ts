@@ -67,6 +67,10 @@ export class LocalStorageService {
     return path.join(this.getTaskFolder(taskId), 'progress.json');
   }
 
+  getLogFilePath(taskId: string): string {
+    return path.join(this.getTaskFolder(taskId), 'process.log');
+  }
+
   saveProgress(
     taskId: string,
     stage: TaskStage,
@@ -91,5 +95,11 @@ export class LocalStorageService {
     };
 
     fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
+  }
+
+  appendLog(taskId: string, message: string): void {
+    const file = this.getLogFilePath(taskId);
+    const line = `[${new Date().toISOString()}] ${message}\n`;
+    fs.appendFileSync(file, line, 'utf-8');
   }
 }

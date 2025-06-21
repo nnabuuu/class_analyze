@@ -24,6 +24,7 @@ export class FlowRunnerService {
   async run(taskId: string, steps: FlowStep[]): Promise<void> {
     for (const step of steps) {
       this.logger.log(`▶️ Running step: ${step.name}`);
+      this.localStorage.appendLog(taskId, `Running step: ${step.name}`);
 
       const handler = this.handlers.find((h) => h.stage === step.name);
       if (!handler) {
@@ -41,13 +42,19 @@ export class FlowRunnerService {
         this.localStorage.saveProgress(taskId, step.name, undefined, 'Started');
         await handler.handle(taskId);
         this.localStorage.saveProgress(taskId, step.name);
+        this.localStorage.appendLog(taskId, `Completed step: ${step.name}`);
       } catch (err) {
         this.logger.error(`❌ Step "${step.name}" failed:`, err);
+        this.localStorage.appendLog(
+          taskId,
+          `Error in step ${step.name}: ${err.message}`,
+        );
         this.localStorage.saveProgress(taskId, 'error', 1, err.message);
         throw err;
       }
     }
 
     this.logger.log(`✅ Flow completed for task ${taskId}`);
+    this.localStorage.appendLog(taskId, 'Flow completed');
   }
 }
