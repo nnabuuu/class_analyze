@@ -1,5 +1,4 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
@@ -23,9 +22,8 @@ export class DeepAnalyzeStageHandler
     @Inject('DEEP_ANALYZE_ITEMS')
     @Optional()
     private readonly items: DeepAnalyzeItem[] = [],
-    private readonly moduleRef: ModuleRef,
   ) {
-    super(moduleRef);
+    super();
   }
 
   async handle(taskId: string): Promise<void> {
