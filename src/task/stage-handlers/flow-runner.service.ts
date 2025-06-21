@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { TaskStage } from '../task.types';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { TaskStageHandler } from './stage-handler.interface';
@@ -12,7 +12,7 @@ export class FlowRunnerService {
 
   constructor(
     private readonly localStorage: LocalStorageService,
-    @Inject('TASK_STAGE_HANDLERS')
+    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
     private readonly handlers: TaskStageHandler[],
   ) {
     console.log(

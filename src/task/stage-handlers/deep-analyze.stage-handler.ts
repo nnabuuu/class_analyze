@@ -4,11 +4,15 @@ import * as path from 'path';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { TaskStage } from '../task.types';
 import { TaskStageHandler } from './stage-handler.interface';
+import { StageHandlerBase } from './stage-handler.base';
 import { DeepAnalyzeItem } from './deep-analyze-item.interface';
 import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
 
 @Injectable()
-export class DeepAnalyzeStageHandler implements TaskStageHandler {
+export class DeepAnalyzeStageHandler
+  extends StageHandlerBase
+  implements TaskStageHandler
+{
   readonly stage: TaskStage = 'deep_analyze';
   readonly outputFiles: string[] = [];
   readonly dependsOn = [TaskEventAnalyzeStageHandler];
@@ -20,8 +24,10 @@ export class DeepAnalyzeStageHandler implements TaskStageHandler {
     private readonly items: DeepAnalyzeItem[] = [],
     @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
     @Optional()
-    private readonly handlers: TaskStageHandler[] = [],
-  ) {}
+    handlers: TaskStageHandler[] = [],
+  ) {
+    super(handlers);
+  }
 
   async handle(taskId: string): Promise<void> {
     for (const item of this.items) {
@@ -38,18 +44,5 @@ export class DeepAnalyzeStageHandler implements TaskStageHandler {
       }
       await item.analyze(taskId);
     }
-  }
-
-  private getStageOutputs(
-    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
-  ): string[] {
-    if (!stages) return [];
-    const deps = Array.isArray(stages) ? stages : [stages];
-    const outputs: string[] = [];
-    for (const dep of deps) {
-      const handler = this.handlers.find((h) => h instanceof dep);
-      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
-    }
-    return outputs;
   }
 }
