@@ -8,7 +8,7 @@ import { TaskStageHandler } from './stage-handler.interface';
 import { StageHandlerBase } from './stage-handler.base';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { TranscriptProcessingStageHandler } from './transcript-processing.stage-handler';
-import { extractLargestJsonBlock } from '../../utils';
+import { extractLargestJsonBlock, sleep } from '../../utils';
 import { TaskStage } from '../task.types';
 import {
   TranscriptProcessingOutput,
@@ -96,7 +96,7 @@ export class TaskEventAnalyzeStageHandler
       fs.writeFileSync(cleanFilePath, JSON.stringify(parsed, null, 2), 'utf-8');
 
       allChunks.push(...parsed);
-      await this.sleep(1000); // rate limit buffer
+      await sleep(1000); // rate limit buffer
     }
 
     const validated = TaskEventAnalyzeOutputSchema.parse(allChunks);
@@ -150,7 +150,4 @@ ${JSON.stringify(chunk, null, 2)}
 - 最终只输出符合上述格式的 JSON，不要添加解释或注释。`;
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }
