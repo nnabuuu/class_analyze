@@ -7,10 +7,13 @@ import {
   UploadedFile,
   UseInterceptors,
   Res,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { map } from 'rxjs/operators';
 import { buildTaskResponse } from './task-response.util';
 import { Response } from 'express';
 
@@ -58,6 +61,20 @@ export class TaskController {
         chunks: `/pipeline-task/${taskId}/chunks`,
       },
     };
+  }
+
+  @Sse(':taskId/events')
+  progressStream(@Param('taskId') taskId: string) {
+    return this.taskService
+      .watchTaskProgress(taskId)
+      .pipe(map((data) => ({ data } as MessageEvent)));
+  }
+
+  @Sse(':taskId/logs')
+  logStream(@Param('taskId') taskId: string) {
+    return this.taskService
+      .watchTaskLog(taskId)
+      .pipe(map((data) => ({ data } as MessageEvent)));
   }
 
   // 5. Get result (structured JSON)
