@@ -1,13 +1,13 @@
-import { ModuleRef } from '@nestjs/core';
 import { TaskStage } from '../task.types';
 import type { TaskStageHandler } from './stage-handler.interface';
 /**
  * Base class for all pipeline stage handlers.
  *
  * Concrete handlers such as `SyllabusMappingStageHandler` extend this class to
- * implement the TaskStageHandler interface. A {@link ModuleRef} instance is
- * injected so subclasses can look up other stage handlers at runtime based on
- * their class types declared in {@link dependsOn}.
+ * implement the TaskStageHandler interface. Dependency metadata is expressed
+ * via the static {@link dependsOn} property so handlers can read output files
+ * from other stages without relying on Nest's {@link ModuleRef} lookup at
+ * runtime.
  *
  * Stage metadata like {@link stage}, {@link outputFiles} and {@link dependsOn}
  * are defined as static properties so they can be read without creating an
@@ -23,7 +23,7 @@ export abstract class StageHandlerBase implements TaskStageHandler {
   static outputFiles?: string[];
   static dependsOn?: StageHandlerCtor[];
 
-  constructor(protected readonly moduleRef: ModuleRef) {}
+  constructor() {}
 
   get stage(): TaskStage {
     return (this.constructor as typeof StageHandlerBase).stage;
@@ -54,8 +54,8 @@ export abstract class StageHandlerBase implements TaskStageHandler {
     const deps = Array.isArray(stages) ? stages : [stages];
     const outputs: string[] = [];
     for (const dep of deps) {
-      const handler = this.moduleRef.get(dep, { strict: false });
-      if (handler?.outputFiles) outputs.push(...handler.outputFiles);
+      const files = (dep as any).outputFiles as string[] | undefined;
+      if (files) outputs.push(...files);
     }
     return outputs;
   }

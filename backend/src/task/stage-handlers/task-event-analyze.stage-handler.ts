@@ -1,5 +1,4 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import OpenAI from 'openai';
@@ -29,9 +28,8 @@ export class TaskEventAnalyzeStageHandler
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
-    private readonly moduleRef: ModuleRef,
   ) {
-    super(moduleRef);
+    super();
   }
 
   static stage: TaskStage = 'task-event-analyze';

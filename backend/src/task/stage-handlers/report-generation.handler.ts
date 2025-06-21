@@ -1,5 +1,4 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import { TaskStageHandler } from './stage-handler.interface';
 import { StageHandlerBase } from './stage-handler.base';
 import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
@@ -22,9 +21,8 @@ export class ReportGenerationStageHandler
     @Inject('DEEP_ANALYZE_ITEMS')
     @Optional()
     private readonly deepAnalyzeItems: DeepAnalyzeItem[] = [],
-    private readonly moduleRef: ModuleRef,
   ) {
-    super(moduleRef);
+    super();
   }
 
   async handle(taskId: string): Promise<void> {

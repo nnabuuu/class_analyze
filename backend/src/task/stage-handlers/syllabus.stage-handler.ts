@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -32,9 +31,8 @@ export class SyllabusMappingStageHandler
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
-    private readonly moduleRef: ModuleRef,
   ) {
-    super(moduleRef);
+    super();
   }
 
   async handle(taskId: string): Promise<void> {
