@@ -1,5 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { TaskService } from './task.service';
+import { sleep } from '../utils';
 
 @Injectable()
 export class TaskQueueService {
@@ -24,7 +25,7 @@ export class TaskQueueService {
     while (true) {
       const task = this.queue.shift();
       if (!task) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await sleep(1000);
         continue;
       }
 

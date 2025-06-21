@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { DeepAnalyzeItem } from '../stage-handlers/deep-analyze-item.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { TaskEventAnalyzeStageHandler } from '../stage-handlers/task-event-analyze.stage-handler';
-import { extractLargestJsonBlock } from '../../utils';
+import { extractLargestJsonBlock, sleep } from '../../utils';
 import {
   TaskEventAnalyzeOutputSchema,
   BloomEventResult,
@@ -51,12 +51,12 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
           eventsOfTask.push(res);
           eventResults.push(res);
         }
-        await this.sleep(500);
+        await sleep(500);
       }
 
       const summary = await this.summarizeTask(task.task_title, eventsOfTask);
       if (summary) taskSummaries.push(summary);
-      await this.sleep(500);
+      await sleep(500);
     }
 
     const overall = await this.summarizeOverall(taskSummaries);
@@ -114,7 +114,7 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
         });
       } catch (err) {
         if (attempt === 3) console.error('Bloom analysis failed:', err);
-        await this.sleep(1000);
+        await sleep(1000);
       }
     }
 
@@ -158,7 +158,7 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
         return parsed;
       } catch (err) {
         if (attempt === 3) console.error('Bloom task summary failed:', err);
-        await this.sleep(1000);
+        await sleep(1000);
       }
     }
     return null;
@@ -187,13 +187,10 @@ export class BloomDeepAnalyzeItem implements DeepAnalyzeItem {
         return parsed;
       } catch (err) {
         if (attempt === 3) console.error('Bloom overall summary failed:', err);
-        await this.sleep(1000);
+        await sleep(1000);
       }
     }
     return null;
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }

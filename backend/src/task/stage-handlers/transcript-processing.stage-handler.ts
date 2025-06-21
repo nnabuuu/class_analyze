@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { ConfigService } from '@nestjs/config';
-import { extractLargestJsonBlock } from '../../utils';
+import { extractLargestJsonBlock, sleep } from '../../utils';
 import { TaskStageHandler } from './stage-handler.interface';
 import { TaskStage } from '../task.types';
 import {
@@ -97,11 +97,11 @@ export class TranscriptProcessingStageHandler implements TaskStageHandler {
         } catch (err) {
           if (attempt === 3)
             console.error(`Batch ${i + 1} failed after 3 retries`, err);
-          await new Promise((r) => setTimeout(r, 5000));
+          await sleep(5000);
         }
       }
 
-      await new Promise((r) => setTimeout(r, 1000));
+      await sleep(1000);
     }
 
     const validated = TranscriptProcessingOutputSchema.parse(allResults);

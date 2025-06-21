@@ -46,3 +46,7 @@ export function extractLargestJsonBlock(content: string): string | null {
 
   return best;
 }
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

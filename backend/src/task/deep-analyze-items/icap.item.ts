@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { DeepAnalyzeItem } from '../stage-handlers/deep-analyze-item.interface';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { TaskEventAnalyzeStageHandler } from '../stage-handlers/task-event-analyze.stage-handler';
-import { extractLargestJsonBlock } from '../../utils';
+import { extractLargestJsonBlock, sleep } from '../../utils';
 import {
   TaskEventAnalyzeOutputSchema,
   ICAPAnalysis,
@@ -40,7 +40,7 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
       for (const event of task.events || []) {
         const result = await this.analyzeEvent(event);
         if (result) results.push(result);
-        await this.sleep(500);
+        await sleep(500);
       }
     }
 
@@ -89,7 +89,7 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
         });
       } catch (err) {
         if (attempt === 3) console.error('ICAP analysis failed:', err);
-        await this.sleep(1000);
+        await sleep(1000);
       }
     }
 
@@ -109,7 +109,4 @@ export class ICAPDeepAnalyzeItem implements DeepAnalyzeItem {
     return `事件类型：${event.event_type}\n事件摘要：${event.summary}\n片段内容：\n${lines.join('\n')}\n请根据以上信息判断该片段的 ICAP 模式，并按照要求输出 JSON。`;
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }
