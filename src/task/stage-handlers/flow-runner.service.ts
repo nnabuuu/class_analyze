@@ -1,4 +1,10 @@
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { TaskStage } from '../task.types';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { TaskStageHandler } from './stage-handler.interface';
@@ -7,17 +13,19 @@ export interface FlowStep {
   name: TaskStage;
 }
 @Injectable()
-export class FlowRunnerService {
+export class FlowRunnerService implements OnModuleInit {
   private readonly logger = new Logger(FlowRunnerService.name);
 
   constructor(
     private readonly localStorage: LocalStorageService,
     @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
     private readonly handlers: TaskStageHandler[],
-  ) {
+  ) {}
+
+  onModuleInit() {
     console.log(
       '✅ Injected handlers:',
-      handlers.map((h) => h.stage),
+      this.handlers.map((h) => h.stage),
     );
   }
 
