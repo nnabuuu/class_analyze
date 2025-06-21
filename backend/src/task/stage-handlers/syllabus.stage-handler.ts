@@ -1,4 +1,5 @@
-import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,9 +21,9 @@ export class SyllabusMappingStageHandler
   extends StageHandlerBase
   implements TaskStageHandler
 {
-  stage: TaskStage = 'syllabus_mapping';
-  readonly outputFiles = ['syllabus_mapping.json'];
-  readonly dependsOn = [TaskEventAnalyzeStageHandler];
+  static stage: TaskStage = 'syllabus_mapping';
+  static outputFiles = ['syllabus_mapping.json'];
+  static dependsOn = [TaskEventAnalyzeStageHandler];
 
   private readonly openai = new OpenAI({
     apiKey: this.config.get('OPENAI_API_KEY'),
@@ -31,15 +32,13 @@ export class SyllabusMappingStageHandler
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
-    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
-    @Optional()
-    handlers: TaskStageHandler[] = [],
+    private readonly moduleRef: ModuleRef,
   ) {
-    super(handlers);
+    super(moduleRef);
   }
 
   async handle(taskId: string): Promise<void> {
-    const [prevFile] = this.getStageOutputs(this.dependsOn);
+    const [prevFile] = this.getStageOutputs();
     const tasksRaw = JSON.parse(
       this.localStorage.readTextFile(taskId, prevFile),
     );

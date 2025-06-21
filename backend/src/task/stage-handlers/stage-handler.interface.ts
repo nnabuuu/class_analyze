@@ -1,4 +1,5 @@
 import { TaskStage } from '../task.types';
+import type { StageHandlerCtor } from './stage-handler.base';
 
 export interface TaskStageHandler {
   readonly stage: TaskStage;
@@ -15,6 +16,6 @@ export interface TaskStageHandler {
    * Classes of handlers this stage depends on. If multiple
    * handlers are required, list them all here.
    */
-  readonly dependsOn?: Array<new (...args: any[]) => TaskStageHandler>;
+  readonly dependsOn?: StageHandlerCtor[];
   handle(taskId: string): Promise<void>;
 }
