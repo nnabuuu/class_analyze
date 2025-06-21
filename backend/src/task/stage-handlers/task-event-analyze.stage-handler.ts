@@ -1,4 +1,5 @@
-import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import OpenAI from 'openai';
@@ -28,19 +29,17 @@ export class TaskEventAnalyzeStageHandler
   constructor(
     private readonly localStorage: LocalStorageService,
     private readonly config: ConfigService,
-    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
-    @Optional()
-    handlers: TaskStageHandler[] = [],
+    private readonly moduleRef: ModuleRef,
   ) {
-    super(handlers);
+    super(moduleRef);
   }
 
-  readonly stage: TaskStage = 'task-event-analyze';
-  readonly outputFiles = ['task_events.json'];
-  readonly dependsOn = [TranscriptProcessingStageHandler];
+  static stage: TaskStage = 'task-event-analyze';
+  static outputFiles = ['task_events.json'];
+  static dependsOn = [TranscriptProcessingStageHandler];
 
   async handle(taskId: string): Promise<void> {
-    const [prevFile] = this.getStageOutputs(this.dependsOn);
+    const [prevFile] = this.getStageOutputs();
     const transcriptRaw = this.localStorage.readJsonSafe(taskId, prevFile);
     const transcript = TranscriptProcessingOutputSchema.parse(transcriptRaw);
     await this._process(taskId, transcript);

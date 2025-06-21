@@ -1,4 +1,5 @@
-import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
@@ -13,25 +14,23 @@ export class DeepAnalyzeStageHandler
   extends StageHandlerBase
   implements TaskStageHandler
 {
-  readonly stage: TaskStage = 'deep_analyze';
-  readonly outputFiles: string[] = [];
-  readonly dependsOn = [TaskEventAnalyzeStageHandler];
+  static stage: TaskStage = 'deep_analyze';
+  static outputFiles: string[] = [];
+  static dependsOn = [TaskEventAnalyzeStageHandler];
 
   constructor(
     private readonly storage: LocalStorageService,
     @Inject('DEEP_ANALYZE_ITEMS')
     @Optional()
     private readonly items: DeepAnalyzeItem[] = [],
-    @Inject(forwardRef(() => 'TASK_STAGE_HANDLERS'))
-    @Optional()
-    handlers: TaskStageHandler[] = [],
+    private readonly moduleRef: ModuleRef,
   ) {
-    super(handlers);
+    super(moduleRef);
   }
 
   async handle(taskId: string): Promise<void> {
     for (const item of this.items) {
-      const required = this.getStageOutputs(item.dependsOn);
+      const required = this.resolveOutputs(item.dependsOn);
       const folder = this.storage.getTaskFolder(taskId);
       const missing = required.find(
         (f) => !fs.existsSync(path.join(folder, f)),
