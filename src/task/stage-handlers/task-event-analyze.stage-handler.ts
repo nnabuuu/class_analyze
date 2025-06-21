@@ -150,7 +150,9 @@ ${JSON.stringify(chunk, null, 2)}
   }
 
   private getStageOutputs(
-    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
+    stages?: new (
+      ...args: any[]
+    ) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
   ): string[] {
     if (!stages) return [];
     const deps = Array.isArray(stages) ? stages : [stages];

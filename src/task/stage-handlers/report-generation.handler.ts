@@ -1,6 +1,5 @@
 import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import { TaskStageHandler } from './stage-handler.interface';
-import { TaskStage } from '../task.types';
 import { TaskEventAnalyzeStageHandler } from './task-event-analyze.stage-handler';
 import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { DeepAnalyzeItem } from './deep-analyze-item.interface';
@@ -95,7 +94,9 @@ export class ReportGenerationStageHandler implements TaskStageHandler {
   }
 
   private getStageOutputs(
-    stages?: new (...args: any[]) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
+    stages?: new (
+      ...args: any[]
+    ) => TaskStageHandler | Array<new (...args: any[]) => TaskStageHandler>,
   ): string[] {
     if (!stages) return [];
     const deps = Array.isArray(stages) ? stages : [stages];
