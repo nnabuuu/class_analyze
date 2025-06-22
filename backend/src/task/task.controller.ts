@@ -49,7 +49,10 @@ export class TaskController {
     const content = file.buffer.toString('utf-8');
     const transcript = JSON.parse(content);
     const deepAnalyze = parseDeepAnalyze(body.deepAnalyze);
-    const taskId = await this.taskService.createTask({ transcript, deepAnalyze });
+    const taskId = await this.taskService.createTask({
+      transcript,
+      deepAnalyze,
+    });
     return buildTaskResponse(taskId);
   }
 
@@ -105,20 +108,29 @@ export class TaskController {
   progressStream(@Param('taskId') taskId: string) {
     return this.taskService
       .watchTaskProgress(taskId)
-      .pipe(map((data) => ({ data } as MessageEvent)));
+      .pipe(map((data) => ({ data }) as MessageEvent));
   }
 
   @Sse(':taskId/logs')
   logStream(@Param('taskId') taskId: string) {
     return this.taskService
       .watchTaskLog(taskId)
-      .pipe(map((data) => ({ data } as MessageEvent)));
+      .pipe(map((data) => ({ data }) as MessageEvent));
   }
 
   // 5. Get result (structured JSON)
   @Get(':taskId/result')
   getResult(@Param('taskId') taskId: string) {
     return this.taskService.getTaskResult(taskId);
+  }
+
+  // 5a. Get deep analysis result
+  @Get(':taskId/deep/:type')
+  getDeepAnalysis(
+    @Param('taskId') taskId: string,
+    @Param('type') type: string,
+  ) {
+    return this.taskService.getDeepAnalysis(taskId, type);
   }
 
   // 5b. Get detected class information
@@ -135,16 +147,21 @@ export class TaskController {
 
   @Get(':taskId/report.pdf')
   getReportPdf(@Param('taskId') _taskId: string) {
+    void _taskId;
     throw new NotImplementedException('PDF report generation not implemented');
   }
 
   @Get(':taskId/report.xlsx')
   getReportXlsx(@Param('taskId') _taskId: string) {
-    throw new NotImplementedException('Excel report generation not implemented');
+    void _taskId;
+    throw new NotImplementedException(
+      'Excel report generation not implemented',
+    );
   }
 
   @Post(':taskId/share')
   createShare(@Param('taskId') _taskId: string) {
+    void _taskId;
     throw new NotImplementedException('Share API not implemented');
   }
 

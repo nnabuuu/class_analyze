@@ -44,18 +44,14 @@ import { SyllabusMappingStageHandler } from './stage-handlers/syllabus.stage-han
         DeepAnalyzeStageHandler,
       ],
     },
-    { 
+    {
       provide: 'DEEP_ANALYZE_ITEMS',
       useFactory: (
         echo: EchoDeepAnalyzeItem,
         icap: ICAPDeepAnalyzeItem,
         bloom: BloomDeepAnalyzeItem,
       ) => [echo, icap, bloom],
-      inject: [
-        EchoDeepAnalyzeItem,
-        ICAPDeepAnalyzeItem,
-        BloomDeepAnalyzeItem,
-      ],
+      inject: [EchoDeepAnalyzeItem, ICAPDeepAnalyzeItem, BloomDeepAnalyzeItem],
     },
   ],
   controllers: [TaskController],

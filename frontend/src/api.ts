@@ -61,11 +61,12 @@ export async function fetchJson<T>(url: string): Promise<T> {
 }
 
 export async function fetchResult(taskId: string) {
-  const [tasks, classInfo] = await Promise.all([
+  const [tasks, classInfo, bloom] = await Promise.all([
     fetchJson(makeUrl(`/pipeline-task/${taskId}/result`)),
     fetchJson(makeUrl(`/pipeline-task/${taskId}/class-info`)),
+    fetchBloomAnalysis(taskId).catch(() => null),
   ]);
-  return { tasks, classInfo };
+  return { tasks, classInfo, bloom };
 }
 
 export async function downloadFile(
@@ -109,4 +110,8 @@ export async function fetchTaskPlan(taskId: string): Promise<PlanStep[]> {
   return fetchJson<{ steps: PlanStep[] }>(`/pipeline-task/${taskId}/plan`).then(
     (d) => d.steps,
   );
+}
+
+export async function fetchBloomAnalysis(taskId: string) {
+  return fetchJson(`/pipeline-task/${taskId}/deep/bloom`);
 }

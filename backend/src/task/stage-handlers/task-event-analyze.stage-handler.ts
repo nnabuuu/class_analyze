@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import OpenAI from 'openai';
@@ -147,5 +147,4 @@ ${JSON.stringify(chunk, null, 2)}
 - 保留每句的时间戳和说话人角色推断。
 - 最终只输出符合上述格式的 JSON，不要添加解释或注释。`;
   }
-
 }
