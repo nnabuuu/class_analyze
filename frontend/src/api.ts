@@ -2,6 +2,8 @@ export interface UploadResponse {
   taskId: string;
 }
 
+import type { PlanStep } from './types';
+
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 function makeUrl(path: string): string {
@@ -102,6 +104,9 @@ export async function createShareLink(
   }
 }
 
-export async function fetchTaskPlan(taskId: string): Promise<string[]> {
-  return fetchJson(`/pipeline-task/${taskId}/plan`).then((d: any) => d.steps);
+
+export async function fetchTaskPlan(taskId: string): Promise<PlanStep[]> {
+  return fetchJson<{ steps: PlanStep[] }>(`/pipeline-task/${taskId}/plan`).then(
+    (d) => d.steps,
+  );
 }

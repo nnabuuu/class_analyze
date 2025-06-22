@@ -14,3 +14,14 @@ export interface TaskStatus {
   progress: number;
   message?: string;
 }
+
+export const STAGE_LABELS: Record<TaskStage, string> = {
+  initializing: 'File Processing',
+  transcript_preprocessing: 'File Processing',
+  'task-event-analyze': 'Task Segmentation',
+  syllabus_mapping: 'Class Information Detection',
+  deep_analyze: 'BLOOM Taxonomy Analysis',
+  report_generation: 'Report Generation',
+  done: 'Completed',
+  error: 'Error',
+};

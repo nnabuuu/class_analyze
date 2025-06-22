@@ -3,6 +3,11 @@ export interface AudioFile {
   type: 'audio' | 'transcript';
 }
 
+export interface PlanStep {
+  id: string;
+  label: string;
+}
+
 export interface ProcessingStage {
   id: string;
   name: string;
