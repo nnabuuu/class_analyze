@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Copy, Share2, Lock, Calendar, Download } from 'lucide-react';
 import { ShareSettings } from '../types';
+import { createShareLink } from '../api';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -37,20 +38,22 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, analysi
     setShareSettings(prev => ({ ...prev, password }));
   };
 
-  const handleCreateShare = () => {
+  const handleCreateShare = async () => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiryDays);
-    
+
     const finalSettings = {
       ...shareSettings,
       expiresAt: expiryDays > 0 ? expiresAt : undefined,
     };
 
-    // Here you would typically send the share settings to your backend
-    console.log('Creating share with settings:', finalSettings);
-    
-    // For demo purposes, we'll just show success
-    alert('Share link created successfully!');
+    const res = await createShareLink(analysisId, finalSettings);
+    if (res) {
+      setShareSettings(prev => ({ ...prev, url: res.url }));
+      alert('Share link created successfully!');
+    } else {
+      alert('Failed to create share link, using mock URL');
+    }
   };
 
   if (!isOpen) return null;

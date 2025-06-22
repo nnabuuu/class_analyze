@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Share2, FileText, FileSpreadsheet } from 'lucide-react';
 import { ShareModal } from './ShareModal';
+import { downloadFile } from '../api';
 
 interface ReportActionsProps {
   analysisId: string;
@@ -13,23 +14,31 @@ export const ReportActions: React.FC<ReportActionsProps> = ({ analysisId, title 
 
   const handleDownload = async (format: 'pdf' | 'excel') => {
     setIsDownloading(true);
-    
+
     try {
-      // Simulate download process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // In a real implementation, you would generate and download the file
-      const fileName = `${title.replace(/\s+/g, '_')}_analysis.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
-      console.log(`Downloading ${fileName}...`);
-      
-      // Create a mock download
-      const element = document.createElement('a');
-      element.href = '#';
-      element.download = fileName;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      
+      const blob = await downloadFile(analysisId, format);
+      const fileName = `${title.replace(/\s+/g, '_')}_analysis.${
+        format === 'pdf' ? 'pdf' : 'xlsx'
+      }`;
+
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const element = document.createElement('a');
+        element.href = url;
+        element.download = fileName;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        URL.revokeObjectURL(url);
+      } else {
+        // Fallback mock download
+        const element = document.createElement('a');
+        element.href = '#';
+        element.download = fileName;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+      }
     } catch (error) {
       console.error('Download failed:', error);
       alert('Download failed. Please try again.');
