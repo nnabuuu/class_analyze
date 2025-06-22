@@ -33,6 +33,7 @@ interface BackendTask {
 interface BackendResult {
   tasks: BackendTask[];
   classInfo: ClassInfo;
+  bloom?: any;
 }
 
 function transformResult(id: string, data: BackendResult): AnalysisResult {
@@ -72,6 +73,20 @@ function transformResult(id: string, data: BackendResult): AnalysisResult {
     };
   });
 
+  // attach bloom analysis if available
+  if (data.bloom && Array.isArray(data.bloom.taskSummaries)) {
+    data.bloom.taskSummaries.forEach((summary: any, idx: number) => {
+      const target = tasks[idx];
+      if (!target) return;
+      target.bloomAnalysis = {
+        level: summary.predominant_level || 'Remember',
+        confidence: 1,
+        description: summary.summary || '',
+        keywords: [],
+      };
+    });
+  }
+
   const duration = tasks.reduce((max, t) => Math.max(max, t.endTime), 0);
 
   return {
@@ -81,7 +96,7 @@ function transformResult(id: string, data: BackendResult): AnalysisResult {
     classInfo: data.classInfo,
     tasks,
     deepAnalysis: {
-      bloom: false,
+      bloom: !!data.bloom,
       sentiment: false,
       engagement: false,
       participation: false,

@@ -100,7 +100,7 @@ export class TaskService {
         'processing',
       );
 
-      let planNames = this.getTaskPlan(taskId);
+      const planNames = this.getTaskPlan(taskId);
       let steps: FlowStep[];
       if (planNames && planNames.length) {
         steps = planNames.map((name) => ({ name: name as TaskStage }));
@@ -125,7 +125,11 @@ export class TaskService {
   }
 
   // ✅ Task execution plan by type
-  buildStepsForTask(taskId: string, type: string, savePlan = false): FlowStep[] {
+  buildStepsForTask(
+    taskId: string,
+    type: string,
+    savePlan = false,
+  ): FlowStep[] {
     let plan: FlowStep[];
 
     if (type === 'txt_transcript') {
@@ -151,7 +155,11 @@ export class TaskService {
       this.localStorage.saveFile(
         taskId,
         'plan.json',
-        JSON.stringify(plan.map((s) => s.name), null, 2),
+        JSON.stringify(
+          plan.map((s) => s.name),
+          null,
+          2,
+        ),
       );
     }
 
@@ -172,13 +180,22 @@ export class TaskService {
   }
 
   getTaskPlan(taskId: string): string[] {
-    return (
-      this.localStorage.readJsonSafe(taskId, 'plan.json') || []
-    );
+    return this.localStorage.readJsonSafe(taskId, 'plan.json') || [];
   }
 
   getTaskReport(taskId: string) {
     return this.localStorage.readTextFile(taskId, 'tasks_report.md');
+  }
+
+  getDeepAnalysis(taskId: string, type: string) {
+    const map: Record<string, string> = {
+      bloom: 'bloom_taxonomy.json',
+      icap: 'icap_modes.json',
+      echo: 'echo_summary.json',
+    };
+    const file = map[type];
+    if (!file) return null;
+    return this.localStorage.readJsonSafe(taskId, file);
   }
 
   getTaskChunks(taskId: string): string[] {
