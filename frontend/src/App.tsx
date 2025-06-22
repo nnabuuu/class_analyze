@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { FileUpload } from './components/FileUpload';
-import { ProcessingContainer } from './components/ProcessingContainer';
-import { ReportView } from './components/ReportView';
+import React, { useState } from "react";
+import { FileUpload } from "./components/FileUpload";
+import { ProcessingContainer } from "./components/ProcessingContainer";
+import { ReportView } from "./components/ReportView";
 import {
   AudioFile,
   AnalysisResult,
   ClassTask,
   ConversationEvent,
   ClassInfo,
-} from './types';
-import { uploadFile, fetchResult } from './api';
+} from "./types";
+import { uploadFile, fetchResult } from "./api";
 
 interface BackendSentence {
   start: number;
@@ -48,8 +48,8 @@ function transformResult(id: string, data: BackendResult): AnalysisResult {
         const role =
           (s.speaker_probabilities?.teacher ?? 0) >=
           (s.speaker_probabilities?.student ?? 0)
-            ? 'teacher'
-            : 'student';
+            ? "teacher"
+            : "student";
         events.push({
           id: `${tIdx}-${idx}-${events.length}`,
           role,
@@ -66,7 +66,7 @@ function transformResult(id: string, data: BackendResult): AnalysisResult {
     return {
       id: `t${tIdx}`,
       name: task.task_title,
-      description: task.summary || '',
+      description: task.summary || "",
       startTime: start === Infinity ? 0 : start,
       endTime: end,
       events,
@@ -79,9 +79,9 @@ function transformResult(id: string, data: BackendResult): AnalysisResult {
       const target = tasks[idx];
       if (!target) return;
       target.bloomAnalysis = {
-        level: summary.predominant_level || 'Remember',
+        level: summary.predominant_level || "Remember",
         confidence: 1,
-        description: summary.summary || '',
+        description: summary.summary || "",
         keywords: [],
       };
     });
@@ -89,18 +89,16 @@ function transformResult(id: string, data: BackendResult): AnalysisResult {
 
   const duration = tasks.reduce((max, t) => Math.max(max, t.endTime), 0);
 
+  const deepAnalysis: Record<string, boolean> = {};
+  if (data.bloom) deepAnalysis["bloom"] = true;
+
   return {
     id,
-    title: 'Class Analysis',
+    title: "Class Analysis",
     duration,
     classInfo: data.classInfo,
     tasks,
-    deepAnalysis: {
-      bloom: !!data.bloom,
-      sentiment: false,
-      engagement: false,
-      participation: false,
-    },
+    deepAnalysis,
   };
 }
 
@@ -129,7 +127,7 @@ function App() {
         const analysis = transformResult(taskId, result);
         setAnalysis(analysis);
       } catch (err) {
-        console.error('Failed to fetch result:', err);
+        console.error("Failed to fetch result:", err);
       }
     }
 
@@ -153,8 +151,9 @@ function App() {
             Class Audio Analyzer
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Upload your class audio or transcript to get detailed analysis of learning activities, 
-            BLOOM taxonomy levels, and student engagement patterns.
+            Upload your class audio or transcript to get detailed analysis of
+            learning activities, BLOOM taxonomy levels, and student engagement
+            patterns.
           </p>
         </div>
 
@@ -175,7 +174,9 @@ function App() {
           {showReport && (
             <>
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-semibold text-gray-900">Analysis Results</h2>
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  Analysis Results
+                </h2>
                 <button
                   onClick={handleNewAnalysis}
                   className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -190,7 +191,10 @@ function App() {
 
         {/* Footer */}
         <div className="mt-16 text-center text-gray-500 text-sm">
-          <p>Powered by advanced AI analysis • Secure processing • Educational insights</p>
+          <p>
+            Powered by advanced AI analysis • Secure processing • Educational
+            insights
+          </p>
         </div>
       </div>
     </div>

@@ -2,35 +2,35 @@ export interface UploadResponse {
   taskId: string;
 }
 
-import type { PlanStep } from './types';
+import type { PlanStep } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE = import.meta.env.VITE_API_BASE || "";
 
 function makeUrl(path: string): string {
   if (!API_BASE) return path;
-  return API_BASE.replace(/\/$/, '') + path;
+  return API_BASE.replace(/\/$/, "") + path;
 }
 
 export async function uploadFile(
   file: File,
-  type: 'audio' | 'transcript',
+  type: "audio" | "transcript",
   deepAnalyze?: string[],
 ): Promise<UploadResponse> {
   const form = new FormData();
-  form.append('file', file);
+  form.append("file", file);
   if (deepAnalyze && deepAnalyze.length) {
-    form.append('deepAnalyze', deepAnalyze.join(','));
+    form.append("deepAnalyze", deepAnalyze.join(","));
   }
 
   const endpoint =
-    type === 'audio'
-      ? makeUrl('/pipeline-task/upload-audio')
-      : type === 'transcript'
-      ? makeUrl('/pipeline-task/upload-text')
-      : makeUrl('/pipeline-task/upload');
+    type === "audio"
+      ? makeUrl("/pipeline-task/upload-audio")
+      : type === "transcript"
+        ? makeUrl("/pipeline-task/upload-text")
+        : makeUrl("/pipeline-task/upload");
 
-  const res = await fetch(endpoint, { method: 'POST', body: form });
-  if (!res.ok) throw new Error('Request failed');
+  const res = await fetch(endpoint, { method: "POST", body: form });
+  if (!res.ok) throw new Error("Request failed");
   const data = await res.json();
   return { taskId: data.id };
 }
@@ -49,14 +49,14 @@ export function streamProgress(
     };
     return es;
   } catch (err) {
-    console.warn('SSE not available:', err);
+    console.warn("SSE not available:", err);
     return null;
   }
 }
 
 export async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(makeUrl(url));
-  if (!res.ok) throw new Error('Request failed');
+  if (!res.ok) throw new Error("Request failed");
   return res.json();
 }
 
@@ -71,18 +71,18 @@ export async function fetchResult(taskId: string) {
 
 export async function downloadFile(
   taskId: string,
-  format: 'pdf' | 'excel',
+  format: "pdf" | "excel",
 ): Promise<Blob | null> {
   const url =
-    format === 'pdf'
+    format === "pdf"
       ? makeUrl(`/pipeline-task/${taskId}/report.pdf`)
       : makeUrl(`/pipeline-task/${taskId}/report.xlsx`);
   try {
     const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed');
+    if (!res.ok) throw new Error("Failed");
     return res.blob();
   } catch (err) {
-    console.warn('Download not available:', err);
+    console.warn("Download not available:", err);
     return null;
   }
 }
@@ -93,18 +93,17 @@ export async function createShareLink(
 ): Promise<{ url: string } | null> {
   try {
     const res = await fetch(makeUrl(`/pipeline-task/${taskId}/share`), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
     });
-    if (!res.ok) throw new Error('Failed');
+    if (!res.ok) throw new Error("Failed");
     return res.json();
   } catch (err) {
-    console.warn('Share link creation failed:', err);
+    console.warn("Share link creation failed:", err);
     return null;
   }
 }
-
 
 export async function fetchTaskPlan(taskId: string): Promise<PlanStep[]> {
   return fetchJson<{ steps: PlanStep[] }>(`/pipeline-task/${taskId}/plan`).then(
@@ -114,4 +113,14 @@ export async function fetchTaskPlan(taskId: string): Promise<PlanStep[]> {
 
 export async function fetchBloomAnalysis(taskId: string) {
   return fetchJson(`/pipeline-task/${taskId}/deep/bloom`);
+}
+
+export interface DeepItem {
+  name: string;
+}
+
+export async function fetchDeepItems(): Promise<DeepItem[]> {
+  return fetchJson<{ items: DeepItem[] }>(`/pipeline-task/deep-items`).then(
+    (d) => d.items,
+  );
 }
