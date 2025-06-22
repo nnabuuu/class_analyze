@@ -2,22 +2,41 @@ import React, { useState } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { ProcessingContainer } from './components/ProcessingContainer';
 import { ReportView } from './components/ReportView';
-import { AudioFile } from './types';
+import { AudioFile, AnalysisResult } from './types';
 import { mockAnalysisResult } from './data/mockData';
+import { uploadFile, fetchResult } from './api';
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<AudioFile | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
 
-  const handleFileSelect = (file: AudioFile) => {
+  const handleFileSelect = async (file: AudioFile) => {
     setSelectedFile(file);
     setIsProcessing(true);
     setShowReport(false);
+
+    const { taskId } = await uploadFile(file.file, file.type);
+    setTaskId(taskId);
   };
 
-  const handleProcessingComplete = () => {
+  const handleProcessingComplete = async () => {
     setIsProcessing(false);
+
+    if (taskId) {
+      const result = await fetchResult(taskId);
+      if (result) {
+        // Conversion to AnalysisResult is domain specific; use mock for now
+        setAnalysis(mockAnalysisResult);
+      } else {
+        setAnalysis(mockAnalysisResult);
+      }
+    } else {
+      setAnalysis(mockAnalysisResult);
+    }
+
     setShowReport(true);
   };
 
@@ -25,6 +44,8 @@ function App() {
     setSelectedFile(null);
     setIsProcessing(false);
     setShowReport(false);
+    setTaskId(null);
+    setAnalysis(null);
   };
 
   return (
@@ -51,6 +72,7 @@ function App() {
             <ProcessingContainer
               isProcessing={isProcessing}
               onComplete={handleProcessingComplete}
+              taskId={taskId}
             />
           )}
 
@@ -65,7 +87,7 @@ function App() {
                   New Analysis
                 </button>
               </div>
-              <ReportView analysisResult={mockAnalysisResult} />
+              {analysis && <ReportView analysisResult={analysis} />}
             </>
           )}
         </div>

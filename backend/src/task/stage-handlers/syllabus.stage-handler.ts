@@ -13,6 +13,7 @@ import {
   TaskEventAnalyzeOutputSchema,
   SyllabusMappingOutput,
   SyllabusMappingOutputSchema,
+  ClassInfoSchema,
 } from '../../models';
 
 @Injectable()
@@ -21,7 +22,7 @@ export class SyllabusMappingStageHandler
   implements TaskStageHandler
 {
   static stage: TaskStage = 'syllabus_mapping';
-  static outputFiles = ['syllabus_mapping.json'];
+  static outputFiles = ['mapped_syllabus.json', 'class_info.json'];
   static dependsOn = [TaskEventAnalyzeStageHandler];
 
   private readonly openai = new OpenAI({
@@ -49,6 +50,10 @@ export class SyllabusMappingStageHandler
     const syllabusItems = JSON.parse(fs.readFileSync(syllabusPath, 'utf-8'));
 
     const results: SyllabusMappingOutput = [];
+    const knowledgePoints = new Set<string>();
+    const teachingObjectives = new Set<string>();
+    let subject = 'Unknown';
+    let level = 'Unknown';
 
     for (const task of tasks) {
       const selectedItems = this.filterRelevantItems(
@@ -62,7 +67,8 @@ export class SyllabusMappingStageHandler
         messages: [
           {
             role: 'system',
-            content: '你是一个教学分析助手，帮助匹配教学任务与教学目标。',
+            content:
+              '你是一个教学分析助手，帮助匹配教学任务与教学目标，并推断课程的学科和年级。',
           },
           { role: 'user', content: prompt },
         ],
@@ -70,11 +76,26 @@ export class SyllabusMappingStageHandler
       });
 
       const content = response.choices[0].message.content?.trim();
+      const parsed = this.extractJson(content);
+
+      const matches = Array.isArray(parsed) ? parsed : parsed.matches;
+      if (parsed.subject) subject = parsed.subject;
+      if (parsed.level) level = parsed.level;
+
+      if (Array.isArray(matches)) {
+        matches.forEach((m: any) => {
+          const item = selectedItems[m.id - 1];
+          if (item) {
+            knowledgePoints.add(item.topic);
+            teachingObjectives.add(item.objective);
+          }
+        });
+      }
 
       results.push({
         task_title: task.task_title,
         event_summary: task.summary,
-        matched: this.extractJson(content),
+        matched: matches,
       });
     }
 
@@ -82,8 +103,23 @@ export class SyllabusMappingStageHandler
 
     this.localStorage.saveFile(
       taskId,
-      'syllabus_mapping.json',
+      'mapped_syllabus.json',
       JSON.stringify(validated, null, 2),
+    );
+
+    const classInfo = ClassInfoSchema.parse({
+      subject,
+      level,
+      knowledgePoints: Array.from(knowledgePoints),
+      teachingObjectives: Array.from(teachingObjectives),
+      curriculum: 'Unknown',
+      confidence: 0.6,
+    });
+
+    this.localStorage.saveFile(
+      taskId,
+      'class_info.json',
+      JSON.stringify(classInfo, null, 2),
     );
   }
 
@@ -97,7 +133,7 @@ export class SyllabusMappingStageHandler
     const list = items
       .map((item, idx) => `${idx + 1}. ${item.objective}`)
       .join('\n');
-    return `教学任务标题：${task.task_title}\n总结：${task.summary}\n\n以下是候选教学目标：\n${list}\n\n请输出最相关的编号（可多选）与理由，格式如下：\n[\n  { \"id\": 1, \"reason\": \"...\" }\n]`;
+    return `教学任务标题：${task.task_title}\n总结：${task.summary}\n\n以下是候选教学目标：\n${list}\n\n请推断本任务所属的学科和适用年级，并输出最相关的编号（可多选）与理由，格式如下：\n{\n  \"subject\": \"学科\",\n  \"level\": \"年级\",\n  \"matches\": [ { \"id\": 1, \"reason\": \"...\" } ]\n}`;
   }
 
   private extractJson(content: string): any {

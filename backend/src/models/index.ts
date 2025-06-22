@@ -4,3 +4,4 @@ export * from './syllabus';
 export * from './bloom';
 export * from './icap';
 export * from './echo';
+export * from './class-info';
