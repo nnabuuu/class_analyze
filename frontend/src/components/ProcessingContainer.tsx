@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronUp, ChevronDown, CheckCircle, Clock, AlertCircle, Loader, Info, BarChart3, FileText, Brain } from 'lucide-react';
 import { ProcessingStage, ProcessingDetails } from '../types';
+import { streamProgress } from '../api';
 
 interface ProcessingContainerProps {
   isProcessing: boolean;
@@ -235,17 +236,9 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
 
     let es: EventSource | null = null;
     if (taskId && taskId !== 'mock-task') {
-      try {
-        es = new EventSource(`/pipeline-task/${taskId}/events`);
-        es.onmessage = (ev) => {
-          console.log('Progress event', ev.data);
-        };
-        es.onerror = () => {
-          es?.close();
-        };
-      } catch (e) {
-        console.warn('Failed to connect SSE', e);
-      }
+      es = streamProgress(taskId, (data) => {
+        console.log('Progress event', data);
+      });
     }
 
     const processStages = async () => {
