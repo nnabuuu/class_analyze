@@ -17,6 +17,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { map } from 'rxjs/operators';
 import { buildTaskResponse } from './task-response.util';
 import { Response } from 'express';
+import { TaskStage, STAGE_LABELS } from './task.types';
 
 function parseDeepAnalyze(input: any): string[] | undefined {
   if (!input) return undefined;
@@ -93,8 +94,11 @@ export class TaskController {
   // 4b. Get planned steps
   @Get(':taskId/plan')
   getPlan(@Param('taskId') taskId: string) {
-    const steps = this.taskService.getTaskPlan(taskId);
-    return { steps };
+    const raw = this.taskService.getTaskPlan(taskId);
+    const steps = ['initializing', ...raw] as TaskStage[];
+    return {
+      steps: steps.map((s) => ({ id: s, label: STAGE_LABELS[s] || s })),
+    };
   }
 
   @Sse(':taskId/events')

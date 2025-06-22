@@ -14,83 +14,37 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
   onComplete,
   taskId,
 }) => {
-  const [stages, setStages] = useState<ProcessingStage[]>([
-    {
-      id: '1',
-      name: 'File Processing',
-      status: 'pending',
-      progress: 0,
-      logs: [],
-      isExpanded: false,
-    },
-    {
-      id: '2',
-      name: 'Audio Transcription',
-      status: 'pending',
-      progress: 0,
-      logs: [],
-      isExpanded: false,
-    },
-    {
-      id: '3',
-      name: 'Class Information Detection',
-      status: 'pending',
-      progress: 0,
-      logs: [],
-      isExpanded: false,
-    },
-    {
-      id: '4',
-      name: 'Task Segmentation',
-      status: 'pending',
-      progress: 0,
-      logs: [],
-      isExpanded: false,
-    },
-    {
-      id: '5',
-      name: 'BLOOM Taxonomy Analysis',
-      status: 'pending',
-      progress: 0,
-      logs: [],
-      isExpanded: false,
-    },
-    {
-      id: '6',
-      name: 'Engagement Analysis',
-      status: 'pending',
-      progress: 0,
-      logs: [],
-      isExpanded: false,
-    },
-    {
-      id: '7',
-      name: 'Report Generation',
-      status: 'pending',
-      progress: 0,
-      logs: [],
-      isExpanded: false,
-    },
-  ]);
+  const [stages, setStages] = useState<ProcessingStage[]>([]);
+  const [stageOrder, setStageOrder] = useState<string[]>([]);
+  const [stageMap, setStageMap] = useState<Record<string, string>>({});
   
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [currentStageIndex, setCurrentStageIndex] = useState(-1);
   const [plannedStepCount, setPlannedStepCount] = useState<number | null>(null);
 
-  const stageOrder = [
-    'File Processing',
-    'Audio Transcription',
-    'Class Information Detection',
-    'Task Segmentation',
-    'BLOOM Taxonomy Analysis',
-    'Engagement Analysis',
-    'Report Generation',
-  ];
-
   useEffect(() => {
     if (!taskId) return;
     fetchTaskPlan(taskId)
-      .then((steps) => setPlannedStepCount(steps.length))
+      .then((steps) => {
+        const map: Record<string, string> = {};
+        const ordered = steps.map((s) => {
+          map[s.id] = s.label;
+          return s.label;
+        });
+        setStageOrder(ordered);
+        setStageMap(map);
+        setPlannedStepCount(ordered.length);
+        setStages(
+          steps.map((s) => ({
+            id: s.id,
+            name: s.label,
+            status: 'pending',
+            progress: 0,
+            logs: [],
+            isExpanded: false,
+          })),
+        );
+      })
       .catch(() => setPlannedStepCount(null));
   }, [taskId]);
 
@@ -301,14 +255,6 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
   useEffect(() => {
     if (!isProcessing) return;
 
-    const stageMap: Record<string, string> = {
-      initializing: 'File Processing',
-      transcript_preprocessing: 'File Processing',
-      'task-event-analyze': 'Task Segmentation',
-      syllabus_mapping: 'Class Information Detection',
-      deep_analyze: 'BLOOM Taxonomy Analysis',
-      report_generation: 'Report Generation',
-    };
 
     let es: EventSource | null = null;
 
@@ -358,7 +304,7 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
     return () => {
       if (es) es.close();
     };
-  }, [isProcessing, onComplete, taskId]);
+  }, [isProcessing, onComplete, taskId, stageMap, stageOrder]);
 
   const getStatusIcon = (status: ProcessingStage['status']) => {
     switch (status) {
