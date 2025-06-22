@@ -304,7 +304,7 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
 
     let es: EventSource | null = null;
 
-    if (taskId && taskId !== 'mock-task') {
+    if (taskId) {
       es = streamProgress(taskId, (data) => {
         const stageName = stageMap[data.stage];
         if (!stageName) {
@@ -347,77 +347,9 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
       };
     }
 
-    // Fallback to simulated progress for mock tasks
-    const processStages = async () => {
-      for (let i = 0; i < stages.length; i++) {
-        setCurrentStageIndex(i);
-
-        setStages((prev) =>
-          prev.map((stage, idx) => ({
-            ...stage,
-            status: idx === i ? 'processing' : stage.status,
-            startTime: idx === i ? Date.now() : stage.startTime,
-            isExpanded:
-              idx === i ? true : stage.status === 'completed' ? false : stage.isExpanded,
-          })),
-        );
-
-        for (let progress = 0; progress <= 100; progress += 20) {
-          await new Promise((resolve) => setTimeout(resolve, 400));
-
-          setStages((prev) =>
-            prev.map((stage, idx) => {
-              if (idx === i) {
-                const newLogs = [...stage.logs];
-                const stageSpecificLogs = getStageSpecificLogs(stage.name, progress);
-                newLogs.push(...stageSpecificLogs);
-
-                const details = getStageSpecificDetails(stage.name, progress);
-
-                return {
-                  ...stage,
-                  progress,
-                  logs: newLogs,
-                  details,
-                };
-              }
-              return stage;
-            }),
-          );
-        }
-
-        setStages((prev) =>
-          prev.map((stage, idx) =>
-            idx === i
-              ? {
-                  ...stage,
-                  status: 'completed',
-                  endTime: Date.now(),
-                  isExpanded: true,
-                }
-              : stage,
-          ),
-        );
-
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        setStages((prev) =>
-          prev.map((stage, idx) => (idx === i ? { ...stage, isExpanded: false } : stage)),
-        );
-
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-
-      setCurrentStageIndex(-1);
-      setTimeout(() => {
-        setIsCollapsed(true);
-        onComplete();
-      }, 1000);
+    return () => {
+      if (es) es.close();
     };
-
-    processStages();
-
-    return () => {};
   }, [isProcessing, onComplete, taskId]);
 
   const getStatusIcon = (status: ProcessingStage['status']) => {

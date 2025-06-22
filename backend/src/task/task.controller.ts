@@ -9,6 +9,7 @@ import {
   Res,
   Sse,
   MessageEvent,
+  NotImplementedException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TaskService } from './task.service';
@@ -67,6 +68,12 @@ export class TaskController {
     return buildTaskResponse(taskId);
   }
 
+  @Post('upload-audio')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAudio() {
+    throw new NotImplementedException('Audio upload not supported yet');
+  }
+
   // 4. Get status
   @Get(':taskId/status')
   getStatus(@Param('taskId') taskId: string) {
@@ -113,6 +120,21 @@ export class TaskController {
   @Get(':taskId/report')
   getReport(@Param('taskId') taskId: string) {
     return this.taskService.getTaskReport(taskId);
+  }
+
+  @Get(':taskId/report.pdf')
+  getReportPdf(@Param('taskId') _taskId: string) {
+    throw new NotImplementedException('PDF report generation not implemented');
+  }
+
+  @Get(':taskId/report.xlsx')
+  getReportXlsx(@Param('taskId') _taskId: string) {
+    throw new NotImplementedException('Excel report generation not implemented');
+  }
+
+  @Post(':taskId/share')
+  createShare(@Param('taskId') _taskId: string) {
+    throw new NotImplementedException('Share API not implemented');
   }
 
   // 7. List chunks

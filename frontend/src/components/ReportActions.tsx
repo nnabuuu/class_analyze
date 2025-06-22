@@ -31,13 +31,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({ analysisId, title 
         document.body.removeChild(element);
         URL.revokeObjectURL(url);
       } else {
-        // Fallback mock download
-        const element = document.createElement('a');
-        element.href = '#';
-        element.download = fileName;
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
+        alert('Download failed.');
       }
     } catch (error) {
       console.error('Download failed:', error);
