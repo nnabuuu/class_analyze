@@ -43,10 +43,10 @@ export class SyllabusMappingStageHandler
     );
     const tasks = TaskEventAnalyzeOutputSchema.parse(tasksRaw);
 
-    const syllabusPath = path.join(
-      __dirname,
-      '../../assets/syllabus_items.json',
-    );
+    const envPath = this.config.get<string>('SYLLABUS_ITEMS_PATH');
+    const syllabusPath = envPath
+      ? path.resolve(envPath)
+      : path.join(__dirname, '../../assets/syllabus_items.json');
     const syllabusItems = JSON.parse(fs.readFileSync(syllabusPath, 'utf-8'));
 
     const results: SyllabusMappingOutput = [];
