@@ -101,3 +101,7 @@ export async function createShareLink(
     return null;
   }
 }
+
+export async function fetchTaskPlan(taskId: string): Promise<string[]> {
+  return fetchJson(`/pipeline-task/${taskId}/plan`).then((d: any) => d.steps);
+}

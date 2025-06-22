@@ -90,6 +90,13 @@ export class TaskController {
     };
   }
 
+  // 4b. Get planned steps
+  @Get(':taskId/plan')
+  getPlan(@Param('taskId') taskId: string) {
+    const steps = this.taskService.getTaskPlan(taskId);
+    return { steps };
+  }
+
   @Sse(':taskId/events')
   progressStream(@Param('taskId') taskId: string) {
     return this.taskService
