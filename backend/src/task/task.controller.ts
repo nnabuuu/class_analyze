@@ -67,6 +67,21 @@ export class TaskController {
     return buildTaskResponse(taskId);
   }
 
+  // 3b. Upload audio file
+  @Post('upload-audio')
+  @UseInterceptors(FileInterceptor('file'))
+  async createFromAudio(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
+  ) {
+    const deepAnalyze = parseDeepAnalyze(body.deepAnalyze);
+    const taskId = await this.taskService.submitAudioTask(
+      file.buffer,
+      deepAnalyze,
+    );
+    return buildTaskResponse(taskId);
+  }
+
   // 4. Get status
   @Get(':taskId/status')
   getStatus(@Param('taskId') taskId: string) {
@@ -115,6 +130,23 @@ export class TaskController {
     return this.taskService.getTaskReport(taskId);
   }
 
+  @Get(':taskId/report.pdf')
+  async getReportPdf(@Param('taskId') taskId: string, @Res() res: Response) {
+    const buf = this.taskService.getReportPdf(taskId);
+    res.set({ 'Content-Type': 'application/pdf' });
+    res.send(buf);
+  }
+
+  @Get(':taskId/report.xlsx')
+  async getReportXlsx(@Param('taskId') taskId: string, @Res() res: Response) {
+    const buf = this.taskService.getReportXlsx(taskId);
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    res.send(buf);
+  }
+
   // 7. List chunks
   @Get(':taskId/chunks')
   getChunks(@Param('taskId') taskId: string) {
@@ -143,5 +175,13 @@ export class TaskController {
     });
     archive.pipe(res);
     await archive.finalize();
+  }
+
+  @Post(':taskId/share')
+  async createShare(
+    @Param('taskId') taskId: string,
+    @Body() body: any,
+  ) {
+    return this.taskService.createShareLink(taskId, body);
   }
 }

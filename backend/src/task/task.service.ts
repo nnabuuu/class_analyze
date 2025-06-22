@@ -1,4 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { LocalStorageService } from '../local-storage/local-storage.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -8,17 +10,23 @@ import {
   FlowStep,
 } from './stage-handlers/flow-runner.service';
 import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import * as archiver from 'archiver';
 import { Observable } from 'rxjs';
 
 @Injectable()
 export class TaskService {
+  private readonly openai: OpenAI;
   constructor(
     private readonly localStorage: LocalStorageService,
     @Inject(forwardRef(() => TaskQueueService))
     private readonly taskQueue: TaskQueueService,
     private readonly flowRunner: FlowRunnerService,
-  ) {}
+    private readonly config: ConfigService,
+  ) {
+    this.openai = new OpenAI({ apiKey: this.config.get('OPENAI_API_KEY') });
+  }
 
   // ✅ For structured transcript array
   async createTask(dto: CreateTaskDto): Promise<string> {
@@ -79,6 +87,30 @@ export class TaskService {
     });
 
     return taskId;
+  }
+
+  // ✅ For audio file
+  async submitAudioTask(
+    buffer: Buffer,
+    deepAnalyze?: string[],
+  ): Promise<string> {
+    const tmp = path.join(os.tmpdir(), `audio_${uuidv4()}`);
+    fs.writeFileSync(tmp, buffer);
+    let transcript = '';
+    try {
+      const resp = await this.openai.audio.transcriptions.create({
+        file: fs.createReadStream(tmp),
+        model: 'whisper-1',
+      });
+      transcript = resp.text;
+    } catch (err) {
+      console.warn('Audio transcription failed:', err);
+    } finally {
+      try {
+        fs.unlinkSync(tmp);
+      } catch {}
+    }
+    return this.submitTxtTranscriptTask(transcript, deepAnalyze);
   }
 
   // ✅ Used by the queue runner
@@ -152,6 +184,22 @@ export class TaskService {
 
   getTaskReport(taskId: string) {
     return this.localStorage.readTextFile(taskId, 'tasks_report.md');
+  }
+
+  getReportPdf(taskId: string): Buffer {
+    const file = path.join(this.localStorage.getTaskFolder(taskId), 'tasks_report.pdf');
+    return fs.readFileSync(file);
+  }
+
+  getReportXlsx(taskId: string): Buffer {
+    const file = path.join(this.localStorage.getTaskFolder(taskId), 'tasks_report.xlsx');
+    return fs.readFileSync(file);
+  }
+
+  createShareLink(taskId: string, settings: any): { url: string } {
+    const file = path.join(this.localStorage.getTaskFolder(taskId), 'share.json');
+    fs.writeFileSync(file, JSON.stringify(settings, null, 2), 'utf-8');
+    return { url: settings.url };
   }
 
   getTaskChunks(taskId: string): string[] {
