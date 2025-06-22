@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Optional } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { LocalStorageService } from '../local-storage/local-storage.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -8,6 +8,7 @@ import {
   FlowStep,
 } from './stage-handlers/flow-runner.service';
 import { TaskStage } from './task.types';
+import { DeepAnalyzeItem } from './stage-handlers/deep-analyze-item.interface';
 import * as fs from 'fs';
 import * as archiver from 'archiver';
 import { Observable } from 'rxjs';
@@ -19,6 +20,9 @@ export class TaskService {
     @Inject(forwardRef(() => TaskQueueService))
     private readonly taskQueue: TaskQueueService,
     private readonly flowRunner: FlowRunnerService,
+    @Inject('DEEP_ANALYZE_ITEMS')
+    @Optional()
+    private readonly deepAnalyzeItems: DeepAnalyzeItem[] = [],
   ) {}
 
   // ✅ For structured transcript array
@@ -188,14 +192,13 @@ export class TaskService {
   }
 
   getDeepAnalysis(taskId: string, type: string) {
-    const map: Record<string, string> = {
-      bloom: 'bloom_taxonomy.json',
-      icap: 'icap_modes.json',
-      echo: 'echo_summary.json',
-    };
-    const file = map[type];
-    if (!file) return null;
-    return this.localStorage.readJsonSafe(taskId, file);
+    const item = this.deepAnalyzeItems.find((i) => i.name === type);
+    if (!item || !item.outputFiles.length) return null;
+    return this.localStorage.readJsonSafe(taskId, item.outputFiles[0]);
+  }
+
+  getDeepAnalyzeItems() {
+    return this.deepAnalyzeItems.map((i) => ({ name: i.name }));
   }
 
   getTaskChunks(taskId: string): string[] {

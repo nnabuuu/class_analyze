@@ -111,6 +111,11 @@ export class TaskController {
       .pipe(map((data) => ({ data }) as MessageEvent));
   }
 
+  @Get('deep-items')
+  listDeepItems() {
+    return { items: this.taskService.getDeepAnalyzeItems() };
+  }
+
   @Sse(':taskId/logs')
   logStream(@Param('taskId') taskId: string) {
     return this.taskService

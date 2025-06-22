@@ -1,6 +1,6 @@
 export interface AudioFile {
   file: File;
-  type: 'audio' | 'transcript';
+  type: "audio" | "transcript";
 }
 
 export interface PlanStep {
@@ -11,7 +11,7 @@ export interface PlanStep {
 export interface ProcessingStage {
   id: string;
   name: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status: "pending" | "processing" | "completed" | "error";
   progress: number;
   logs: string[];
   startTime?: number;
@@ -31,7 +31,7 @@ export interface ProcessingDetails {
 
 export interface ConversationEvent {
   id: string;
-  role: 'teacher' | 'student' | 'system';
+  role: "teacher" | "student" | "system";
   text: string;
   startTime: number;
   endTime: number;
@@ -49,7 +49,13 @@ export interface ClassTask {
 }
 
 export interface BloomAnalysis {
-  level: 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create';
+  level:
+    | "Remember"
+    | "Understand"
+    | "Apply"
+    | "Analyze"
+    | "Evaluate"
+    | "Create";
   confidence: number;
   description: string;
   keywords: string[];
@@ -70,12 +76,7 @@ export interface AnalysisResult {
   duration: number;
   classInfo: ClassInfo;
   tasks: ClassTask[];
-  deepAnalysis: {
-    bloom: boolean;
-    sentiment: boolean;
-    engagement: boolean;
-    participation: boolean;
-  };
+  deepAnalysis: Record<string, boolean>;
 }
 
 export interface ShareSettings {
