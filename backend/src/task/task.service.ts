@@ -43,6 +43,13 @@ export class TaskService {
       'queued',
     );
 
+    const plan = this.buildStepsForTask(taskId, 'json_transcript');
+    this.localStorage.saveFile(
+      taskId,
+      'plan.json',
+      JSON.stringify(plan.map((s) => s.name), null, 2),
+    );
+
     await this.taskQueue.enqueue({
       taskId,
       type: 'json_transcript',
@@ -71,6 +78,13 @@ export class TaskService {
       0,
       'Task created',
       'queued',
+    );
+
+    const plan = this.buildStepsForTask(taskId, 'txt_transcript');
+    this.localStorage.saveFile(
+      taskId,
+      'plan.json',
+      JSON.stringify(plan.map((s) => s.name), null, 2),
     );
 
     await this.taskQueue.enqueue({
@@ -148,6 +162,12 @@ export class TaskService {
 
   getClassInfo(taskId: string) {
     return this.localStorage.readJsonSafe(taskId, 'class_info.json');
+  }
+
+  getTaskPlan(taskId: string): string[] {
+    return (
+      this.localStorage.readJsonSafe(taskId, 'plan.json') || []
+    );
   }
 
   getTaskReport(taskId: string) {

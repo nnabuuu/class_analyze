@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronUp, ChevronDown, CheckCircle, Clock, AlertCircle, Loader, Info, BarChart3, FileText, Brain } from 'lucide-react';
 import { ProcessingStage, ProcessingDetails } from '../types';
-import { streamProgress } from '../api';
+import { streamProgress, fetchTaskPlan } from '../api';
 
 interface ProcessingContainerProps {
   isProcessing: boolean;
@@ -75,6 +75,7 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
   
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [currentStageIndex, setCurrentStageIndex] = useState(-1);
+  const [plannedStepCount, setPlannedStepCount] = useState<number | null>(null);
 
   const stageOrder = [
     'File Processing',
@@ -85,6 +86,13 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
     'Engagement Analysis',
     'Report Generation',
   ];
+
+  useEffect(() => {
+    if (!taskId) return;
+    fetchTaskPlan(taskId)
+      .then((steps) => setPlannedStepCount(steps.length))
+      .catch(() => setPlannedStepCount(null));
+  }, [taskId]);
 
   const getStageIcon = (stageName: string) => {
     switch (stageName) {
@@ -366,7 +374,7 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
   };
 
   const completedStages = stages.filter(s => s.status === 'completed').length;
-  const totalStages = stages.length;
+  const totalStages = plannedStepCount ?? stages.length;
 
   if (!isProcessing && completedStages === 0) return null;
 
@@ -386,11 +394,13 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">Analysis Processing</h3>
+            {taskId && (
+              <p className="text-xs text-gray-500 break-all">Task ID: {taskId}</p>
+            )}
             <p className="text-sm text-gray-600">
-              {completedStages === totalStages 
-                ? 'Analysis completed successfully' 
-                : `Processing stage ${currentStageIndex + 1} of ${totalStages}`
-              }
+              {completedStages === totalStages
+                ? 'Analysis completed successfully'
+                : `Processing stage ${currentStageIndex + 1} of ${totalStages}`}
             </p>
           </div>
         </div>
