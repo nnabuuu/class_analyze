@@ -7,6 +7,7 @@ import {
   FlowRunnerService,
   FlowStep,
 } from './stage-handlers/flow-runner.service';
+import { TaskStage } from './task.types';
 import * as fs from 'fs';
 import * as archiver from 'archiver';
 import { Observable } from 'rxjs';
@@ -102,7 +103,7 @@ export class TaskService {
       let planNames = this.getTaskPlan(taskId);
       let steps: FlowStep[];
       if (planNames && planNames.length) {
-        steps = planNames.map((name) => ({ name }));
+        steps = planNames.map((name) => ({ name: name as TaskStage }));
       } else {
         steps = this.buildStepsForTask(taskId, type, true);
       }
