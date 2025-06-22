@@ -76,6 +76,22 @@ $ node cli/index.js submit path/to/file.txt
 $ node cli/index.js watch <taskId>
 ```
 
+## Frontend Deployment
+
+To deploy the frontend with an existing backend instance, create a `.env` file in the `frontend` directory:
+
+```bash
+cp frontend/.env.example frontend/.env
+# edit VITE_API_BASE to match your backend URL
+```
+
+Build the static files and serve the `frontend/dist` folder using any web server:
+
+```bash
+npm run build --prefix frontend
+# then serve frontend/dist, e.g. with nginx or another static host
+```
+
 
 ## Support
 

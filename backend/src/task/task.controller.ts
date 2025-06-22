@@ -17,6 +17,15 @@ import { map } from 'rxjs/operators';
 import { buildTaskResponse } from './task-response.util';
 import { Response } from 'express';
 
+function parseDeepAnalyze(input: any): string[] | undefined {
+  if (!input) return undefined;
+  if (Array.isArray(input)) return input.map(String);
+  return String(input)
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s);
+}
+
 @Controller('pipeline-task')
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
@@ -31,19 +40,30 @@ export class TaskController {
   // 2. Upload transcript as a .json file
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async createFromFile(@UploadedFile() file: Express.Multer.File) {
+  async createFromFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
+  ) {
     const content = file.buffer.toString('utf-8');
     const transcript = JSON.parse(content);
-    const taskId = await this.taskService.createTask({ transcript });
+    const deepAnalyze = parseDeepAnalyze(body.deepAnalyze);
+    const taskId = await this.taskService.createTask({ transcript, deepAnalyze });
     return buildTaskResponse(taskId);
   }
 
   // 3. Upload plain .txt transcript
   @Post('upload-text')
   @UseInterceptors(FileInterceptor('file'))
-  async createFromTextFile(@UploadedFile() file: Express.Multer.File) {
+  async createFromTextFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
+  ) {
     const text = file.buffer.toString('utf-8');
-    const taskId = await this.taskService.submitTxtTranscriptTask(text);
+    const deepAnalyze = parseDeepAnalyze(body.deepAnalyze);
+    const taskId = await this.taskService.submitTxtTranscriptTask(
+      text,
+      deepAnalyze,
+    );
     return buildTaskResponse(taskId);
   }
 
@@ -81,6 +101,12 @@ export class TaskController {
   @Get(':taskId/result')
   getResult(@Param('taskId') taskId: string) {
     return this.taskService.getTaskResult(taskId);
+  }
+
+  // 5b. Get detected class information
+  @Get(':taskId/class-info')
+  getClassInfo(@Param('taskId') taskId: string) {
+    return this.taskService.getClassInfo(taskId);
   }
 
   // 6. Get report (rendered markdown)

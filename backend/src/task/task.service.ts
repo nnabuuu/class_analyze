@@ -28,6 +28,13 @@ export class TaskService {
       'cleaned_transcript.json',
       JSON.stringify(dto.transcript, null, 2),
     );
+    if (dto.deepAnalyze) {
+      this.localStorage.saveFile(
+        taskId,
+        'config.json',
+        JSON.stringify({ deepAnalyze: dto.deepAnalyze }, null, 2),
+      );
+    }
     this.localStorage.saveProgress(
       taskId,
       'initializing',
@@ -45,9 +52,19 @@ export class TaskService {
   }
 
   // ✅ For raw .txt file
-  async submitTxtTranscriptTask(text: string): Promise<string> {
+  async submitTxtTranscriptTask(
+    text: string,
+    deepAnalyze?: string[],
+  ): Promise<string> {
     const taskId = uuidv4();
     this.localStorage.saveFile(taskId, 'input.txt', text);
+    if (deepAnalyze) {
+      this.localStorage.saveFile(
+        taskId,
+        'config.json',
+        JSON.stringify({ deepAnalyze }, null, 2),
+      );
+    }
     this.localStorage.saveProgress(
       taskId,
       'initializing',
@@ -127,6 +144,10 @@ export class TaskService {
 
   getTaskResult(taskId: string) {
     return this.localStorage.readJsonSafe(taskId, 'task_events.json');
+  }
+
+  getClassInfo(taskId: string) {
+    return this.localStorage.readJsonSafe(taskId, 'class_info.json');
   }
 
   getTaskReport(taskId: string) {

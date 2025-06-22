@@ -6,6 +6,7 @@ import { LocalStorageService } from '../../local-storage/local-storage.service';
 import { DeepAnalyzeItem } from './deep-analyze-item.interface';
 import * as path from 'path';
 import * as fs from 'fs';
+import { TaskStage } from '../task.types';
 
 @Injectable()
 export class ReportGenerationStageHandler

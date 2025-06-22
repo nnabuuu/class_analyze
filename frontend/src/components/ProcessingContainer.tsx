@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronUp, ChevronDown, CheckCircle, Clock, AlertCircle, Loader, Info, BarChart3, FileText, Brain } from 'lucide-react';
 import { ProcessingStage, ProcessingDetails } from '../types';
+import { streamProgress } from '../api';
 
 interface ProcessingContainerProps {
   isProcessing: boolean;
   onComplete: () => void;
+  taskId?: string | null;
 }
 
-export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({ 
-  isProcessing, 
-  onComplete 
+export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
+  isProcessing,
+  onComplete,
+  taskId,
 }) => {
   const [stages, setStages] = useState<ProcessingStage[]>([
     { id: '1', name: 'File Processing', status: 'pending', progress: 0, logs: [], isExpanded: false },
@@ -231,6 +234,13 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
   useEffect(() => {
     if (!isProcessing) return;
 
+    let es: EventSource | null = null;
+    if (taskId && taskId !== 'mock-task') {
+      es = streamProgress(taskId, (data) => {
+        console.log('Progress event', data);
+      });
+    }
+
     const processStages = async () => {
       for (let i = 0; i < stages.length; i++) {
         setCurrentStageIndex(i);
@@ -294,7 +304,11 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
     };
 
     processStages();
-  }, [isProcessing, onComplete]);
+
+    return () => {
+      if (es) es.close();
+    };
+  }, [isProcessing, onComplete, taskId]);
 
   const getStatusIcon = (status: ProcessingStage['status']) => {
     switch (status) {
