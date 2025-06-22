@@ -2,6 +2,13 @@ export interface UploadResponse {
   taskId: string;
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE || '';
+
+function makeUrl(path: string): string {
+  if (!API_BASE) return path;
+  return API_BASE.replace(/\/$/, '') + path;
+}
+
 export async function uploadFile(
   file: File,
   type: 'audio' | 'transcript',
@@ -15,10 +22,10 @@ export async function uploadFile(
 
   const endpoint =
     type === 'audio'
-      ? '/pipeline-task/upload-audio'
+      ? makeUrl('/pipeline-task/upload-audio')
       : type === 'transcript'
-      ? '/pipeline-task/upload-text'
-      : '/pipeline-task/upload';
+      ? makeUrl('/pipeline-task/upload-text')
+      : makeUrl('/pipeline-task/upload');
 
   try {
     const res = await fetch(endpoint, { method: 'POST', body: form });
@@ -36,7 +43,7 @@ export function streamProgress(
   onUpdate: (data: any) => void,
 ): EventSource | null {
   try {
-    const es = new EventSource(`/pipeline-task/${taskId}/events`);
+    const es = new EventSource(makeUrl(`/pipeline-task/${taskId}/events`));
     es.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
@@ -51,7 +58,7 @@ export function streamProgress(
 }
 
 export async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(makeUrl(url));
   if (!res.ok) throw new Error('Request failed');
   return res.json();
 }
@@ -59,8 +66,8 @@ export async function fetchJson<T>(url: string): Promise<T> {
 export async function fetchResult(taskId: string) {
   try {
     const [tasks, classInfo] = await Promise.all([
-      fetchJson(`/pipeline-task/${taskId}/result`),
-      fetchJson(`/pipeline-task/${taskId}/class-info`),
+      fetchJson(makeUrl(`/pipeline-task/${taskId}/result`)),
+      fetchJson(makeUrl(`/pipeline-task/${taskId}/class-info`)),
     ]);
     return { tasks, classInfo };
   } catch (err) {
@@ -75,8 +82,8 @@ export async function downloadFile(
 ): Promise<Blob | null> {
   const url =
     format === 'pdf'
-      ? `/pipeline-task/${taskId}/report.pdf`
-      : `/pipeline-task/${taskId}/report.xlsx`;
+      ? makeUrl(`/pipeline-task/${taskId}/report.pdf`)
+      : makeUrl(`/pipeline-task/${taskId}/report.xlsx`);
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed');
@@ -92,7 +99,7 @@ export async function createShareLink(
   settings: any,
 ): Promise<{ url: string } | null> {
   try {
-    const res = await fetch(`/pipeline-task/${taskId}/share`, {
+    const res = await fetch(makeUrl(`/pipeline-task/${taskId}/share`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),
