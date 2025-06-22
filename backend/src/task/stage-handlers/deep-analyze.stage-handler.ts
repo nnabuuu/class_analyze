@@ -27,7 +27,12 @@ export class DeepAnalyzeStageHandler
   }
 
   async handle(taskId: string): Promise<void> {
+    const cfg = this.storage.readJsonSafe(taskId, 'config.json');
+    const enabled: string[] | null = Array.isArray(cfg?.deepAnalyze)
+      ? cfg.deepAnalyze
+      : null;
     for (const item of this.items) {
+      if (enabled && !enabled.includes(item.name)) continue;
       const required = this.resolveOutputs(item.dependsOn);
       const folder = this.storage.getTaskFolder(taskId);
       const missing = required.find(
