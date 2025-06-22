@@ -52,7 +52,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, analysi
       setShareSettings(prev => ({ ...prev, url: res.url }));
       alert('Share link created successfully!');
     } else {
-      alert('Failed to create share link, using mock URL');
+      alert('Failed to create share link');
     }
   };
 

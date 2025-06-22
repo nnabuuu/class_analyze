@@ -27,15 +27,10 @@ export async function uploadFile(
       ? makeUrl('/pipeline-task/upload-text')
       : makeUrl('/pipeline-task/upload');
 
-  try {
-    const res = await fetch(endpoint, { method: 'POST', body: form });
-    if (!res.ok) throw new Error('Request failed');
-    const data = await res.json();
-    return { taskId: data.id };
-  } catch (err) {
-    console.warn('Upload failed, using mock task ID:', err);
-    return { taskId: 'mock-task' };
-  }
+  const res = await fetch(endpoint, { method: 'POST', body: form });
+  if (!res.ok) throw new Error('Request failed');
+  const data = await res.json();
+  return { taskId: data.id };
 }
 
 export function streamProgress(
@@ -64,16 +59,11 @@ export async function fetchJson<T>(url: string): Promise<T> {
 }
 
 export async function fetchResult(taskId: string) {
-  try {
-    const [tasks, classInfo] = await Promise.all([
-      fetchJson(makeUrl(`/pipeline-task/${taskId}/result`)),
-      fetchJson(makeUrl(`/pipeline-task/${taskId}/class-info`)),
-    ]);
-    return { tasks, classInfo };
-  } catch (err) {
-    console.warn('Fetch result failed:', err);
-    return null;
-  }
+  const [tasks, classInfo] = await Promise.all([
+    fetchJson(makeUrl(`/pipeline-task/${taskId}/result`)),
+    fetchJson(makeUrl(`/pipeline-task/${taskId}/class-info`)),
+  ]);
+  return { tasks, classInfo };
 }
 
 export async function downloadFile(

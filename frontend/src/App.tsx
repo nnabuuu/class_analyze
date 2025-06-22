@@ -2,9 +2,92 @@ import React, { useState } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { ProcessingContainer } from './components/ProcessingContainer';
 import { ReportView } from './components/ReportView';
-import { AudioFile, AnalysisResult } from './types';
-import { mockAnalysisResult } from './data/mockData';
+import {
+  AudioFile,
+  AnalysisResult,
+  ClassTask,
+  ConversationEvent,
+  ClassInfo,
+} from './types';
 import { uploadFile, fetchResult } from './api';
+
+interface BackendSentence {
+  start: number;
+  end: number;
+  text: string;
+  speaker_probabilities: { teacher: number; student: number };
+}
+
+interface BackendEvent {
+  event_type: string;
+  summary: string;
+  sentences: BackendSentence[];
+}
+
+interface BackendTask {
+  task_title: string;
+  summary?: string;
+  events: BackendEvent[];
+}
+
+interface BackendResult {
+  tasks: BackendTask[];
+  classInfo: ClassInfo;
+}
+
+function transformResult(id: string, data: BackendResult): AnalysisResult {
+  const tasks: ClassTask[] = data.tasks.map((task, tIdx) => {
+    let start = Infinity;
+    let end = 0;
+    const events: ConversationEvent[] = [];
+    task.events.forEach((ev) => {
+      ev.sentences.forEach((s, idx) => {
+        if (s.start < start) start = s.start;
+        if (s.end > end) end = s.end;
+        const role =
+          (s.speaker_probabilities?.teacher ?? 0) >=
+          (s.speaker_probabilities?.student ?? 0)
+            ? 'teacher'
+            : 'student';
+        events.push({
+          id: `${tIdx}-${idx}-${events.length}`,
+          role,
+          text: s.text,
+          startTime: s.start,
+          endTime: s.end,
+          confidence: Math.max(
+            s.speaker_probabilities.teacher,
+            s.speaker_probabilities.student,
+          ),
+        });
+      });
+    });
+    return {
+      id: `t${tIdx}`,
+      name: task.task_title,
+      description: task.summary || '',
+      startTime: start === Infinity ? 0 : start,
+      endTime: end,
+      events,
+    };
+  });
+
+  const duration = tasks.reduce((max, t) => Math.max(max, t.endTime), 0);
+
+  return {
+    id,
+    title: 'Class Analysis',
+    duration,
+    classInfo: data.classInfo,
+    tasks,
+    deepAnalysis: {
+      bloom: false,
+      sentiment: false,
+      engagement: false,
+      participation: false,
+    },
+  };
+}
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<AudioFile | null>(null);
@@ -26,15 +109,13 @@ function App() {
     setIsProcessing(false);
 
     if (taskId) {
-      const result = await fetchResult(taskId);
-      if (result) {
-        // Conversion to AnalysisResult is domain specific; use mock for now
-        setAnalysis(mockAnalysisResult);
-      } else {
-        setAnalysis(mockAnalysisResult);
+      try {
+        const result = await fetchResult(taskId);
+        const analysis = transformResult(taskId, result);
+        setAnalysis(analysis);
+      } catch (err) {
+        console.error('Failed to fetch result:', err);
       }
-    } else {
-      setAnalysis(mockAnalysisResult);
     }
 
     setShowReport(true);
