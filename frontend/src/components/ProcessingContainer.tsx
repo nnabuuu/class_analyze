@@ -15,17 +15,76 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
   taskId,
 }) => {
   const [stages, setStages] = useState<ProcessingStage[]>([
-    { id: '1', name: 'File Processing', status: 'pending', progress: 0, logs: [], isExpanded: false },
-    { id: '2', name: 'Audio Transcription', status: 'pending', progress: 0, logs: [], isExpanded: false },
-    { id: '3', name: 'Class Information Detection', status: 'pending', progress: 0, logs: [], isExpanded: false },
-    { id: '4', name: 'Task Segmentation', status: 'pending', progress: 0, logs: [], isExpanded: false },
-    { id: '5', name: 'BLOOM Taxonomy Analysis', status: 'pending', progress: 0, logs: [], isExpanded: false },
-    { id: '6', name: 'Engagement Analysis', status: 'pending', progress: 0, logs: [], isExpanded: false },
-    { id: '7', name: 'Report Generation', status: 'pending', progress: 0, logs: [], isExpanded: false },
+    {
+      id: '1',
+      name: 'File Processing',
+      status: 'pending',
+      progress: 0,
+      logs: [],
+      isExpanded: false,
+    },
+    {
+      id: '2',
+      name: 'Audio Transcription',
+      status: 'pending',
+      progress: 0,
+      logs: [],
+      isExpanded: false,
+    },
+    {
+      id: '3',
+      name: 'Class Information Detection',
+      status: 'pending',
+      progress: 0,
+      logs: [],
+      isExpanded: false,
+    },
+    {
+      id: '4',
+      name: 'Task Segmentation',
+      status: 'pending',
+      progress: 0,
+      logs: [],
+      isExpanded: false,
+    },
+    {
+      id: '5',
+      name: 'BLOOM Taxonomy Analysis',
+      status: 'pending',
+      progress: 0,
+      logs: [],
+      isExpanded: false,
+    },
+    {
+      id: '6',
+      name: 'Engagement Analysis',
+      status: 'pending',
+      progress: 0,
+      logs: [],
+      isExpanded: false,
+    },
+    {
+      id: '7',
+      name: 'Report Generation',
+      status: 'pending',
+      progress: 0,
+      logs: [],
+      isExpanded: false,
+    },
   ]);
   
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [currentStageIndex, setCurrentStageIndex] = useState(-1);
+
+  const stageOrder = [
+    'File Processing',
+    'Audio Transcription',
+    'Class Information Detection',
+    'Task Segmentation',
+    'BLOOM Taxonomy Analysis',
+    'Engagement Analysis',
+    'Report Generation',
+  ];
 
   const getStageIcon = (stageName: string) => {
     switch (stageName) {
@@ -234,66 +293,119 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
   useEffect(() => {
     if (!isProcessing) return;
 
+    const stageMap: Record<string, string> = {
+      initializing: 'File Processing',
+      transcript_preprocessing: 'File Processing',
+      'task-event-analyze': 'Task Segmentation',
+      syllabus_mapping: 'Class Information Detection',
+      deep_analyze: 'BLOOM Taxonomy Analysis',
+      report_generation: 'Report Generation',
+    };
+
     let es: EventSource | null = null;
+
     if (taskId && taskId !== 'mock-task') {
       es = streamProgress(taskId, (data) => {
-        console.log('Progress event', data);
+        const stageName = stageMap[data.stage];
+        if (!stageName) {
+          if (data.stage === 'done' && data.status === 'completed') {
+            setStages((prev) =>
+              prev.map((s) => ({ ...s, status: 'completed', progress: 100 })),
+            );
+            setCurrentStageIndex(-1);
+            setTimeout(() => {
+              setIsCollapsed(true);
+              onComplete();
+            }, 1000);
+          }
+          return;
+        }
+
+        setStages((prev) =>
+          prev.map((stage) => {
+            if (stage.name !== stageName) return stage;
+
+            const logs = [...stage.logs];
+            if (data.message) logs.push(data.message);
+
+            const progress =
+              typeof data.progress === 'number'
+                ? Math.round(data.progress * 100)
+                : stage.progress;
+            const status = data.status === 'completed' ? 'completed' : 'processing';
+
+            return { ...stage, progress, status, logs };
+          }),
+        );
+
+        const idx = stageOrder.indexOf(stageName);
+        if (idx !== -1) setCurrentStageIndex(idx);
       });
+
+      return () => {
+        if (es) es.close();
+      };
     }
 
+    // Fallback to simulated progress for mock tasks
     const processStages = async () => {
       for (let i = 0; i < stages.length; i++) {
         setCurrentStageIndex(i);
-        
-        // Expand current stage and collapse others
-        setStages(prev => prev.map((stage, idx) => ({
-          ...stage,
-          status: idx === i ? 'processing' : stage.status,
-          startTime: idx === i ? Date.now() : stage.startTime,
-          isExpanded: idx === i ? true : (stage.status === 'completed' ? false : stage.isExpanded)
-        })));
 
-        // Simulate processing with progress updates
+        setStages((prev) =>
+          prev.map((stage, idx) => ({
+            ...stage,
+            status: idx === i ? 'processing' : stage.status,
+            startTime: idx === i ? Date.now() : stage.startTime,
+            isExpanded:
+              idx === i ? true : stage.status === 'completed' ? false : stage.isExpanded,
+          })),
+        );
+
         for (let progress = 0; progress <= 100; progress += 20) {
-          await new Promise(resolve => setTimeout(resolve, 400));
-          
-          setStages(prev => prev.map((stage, idx) => {
-            if (idx === i) {
-              const newLogs = [...stage.logs];
-              const stageSpecificLogs = getStageSpecificLogs(stage.name, progress);
-              newLogs.push(...stageSpecificLogs);
-              
-              const details = getStageSpecificDetails(stage.name, progress);
-              
-              return { 
-                ...stage, 
-                progress, 
-                logs: newLogs,
-                details
-              };
-            }
-            return stage;
-          }));
+          await new Promise((resolve) => setTimeout(resolve, 400));
+
+          setStages((prev) =>
+            prev.map((stage, idx) => {
+              if (idx === i) {
+                const newLogs = [...stage.logs];
+                const stageSpecificLogs = getStageSpecificLogs(stage.name, progress);
+                newLogs.push(...stageSpecificLogs);
+
+                const details = getStageSpecificDetails(stage.name, progress);
+
+                return {
+                  ...stage,
+                  progress,
+                  logs: newLogs,
+                  details,
+                };
+              }
+              return stage;
+            }),
+          );
         }
 
-        // Complete stage and auto-fold after a brief delay
-        setStages(prev => prev.map((stage, idx) => 
-          idx === i ? { 
-            ...stage, 
-            status: 'completed', 
-            endTime: Date.now(),
-            isExpanded: true // Keep expanded briefly to show completion
-          } : stage
-        ));
+        setStages((prev) =>
+          prev.map((stage, idx) =>
+            idx === i
+              ? {
+                  ...stage,
+                  status: 'completed',
+                  endTime: Date.now(),
+                  isExpanded: true,
+                }
+              : stage,
+          ),
+        );
 
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Auto-fold completed stage
-        setStages(prev => prev.map((stage, idx) => 
-          idx === i ? { ...stage, isExpanded: false } : stage
-        ));
+        await new Promise((resolve) => setTimeout(resolve, 800));
 
-        await new Promise(resolve => setTimeout(resolve, 200));
+        setStages((prev) =>
+          prev.map((stage, idx) => (idx === i ? { ...stage, isExpanded: false } : stage)),
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
       setCurrentStageIndex(-1);
@@ -305,9 +417,7 @@ export const ProcessingContainer: React.FC<ProcessingContainerProps> = ({
 
     processStages();
 
-    return () => {
-      if (es) es.close();
-    };
+    return () => {};
   }, [isProcessing, onComplete, taskId]);
 
   const getStatusIcon = (status: ProcessingStage['status']) => {
