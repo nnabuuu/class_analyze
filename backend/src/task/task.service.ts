@@ -43,6 +43,8 @@ export class TaskService {
       'queued',
     );
 
+    this.buildStepsForTask(taskId, 'json_transcript', true);
+
     await this.taskQueue.enqueue({
       taskId,
       type: 'json_transcript',
@@ -73,6 +75,8 @@ export class TaskService {
       'queued',
     );
 
+    this.buildStepsForTask(taskId, 'txt_transcript', true);
+
     await this.taskQueue.enqueue({
       taskId,
       type: 'txt_transcript',
@@ -95,7 +99,13 @@ export class TaskService {
         'processing',
       );
 
-      const steps = this.buildStepsForTask(taskId, type);
+      let planNames = this.getTaskPlan(taskId);
+      let steps: FlowStep[];
+      if (planNames && planNames.length) {
+        steps = planNames.map((name) => ({ name }));
+      } else {
+        steps = this.buildStepsForTask(taskId, type, true);
+      }
       await this.flowRunner.run(taskId, steps);
 
       this.localStorage.saveProgress(
@@ -114,27 +124,37 @@ export class TaskService {
   }
 
   // ✅ Task execution plan by type
-  buildStepsForTask(taskId: string, type: string): FlowStep[] {
+  buildStepsForTask(taskId: string, type: string, savePlan = false): FlowStep[] {
+    let plan: FlowStep[];
+
     if (type === 'txt_transcript') {
-      return [
+      plan = [
         { name: 'transcript_preprocessing' },
         { name: 'task-event-analyze' },
         { name: 'syllabus_mapping' },
         { name: 'deep_analyze' },
         { name: 'report_generation' },
       ];
-    }
-
-    if (type === 'json_transcript') {
-      return [
+    } else if (type === 'json_transcript') {
+      plan = [
         { name: 'task-event-analyze' },
         { name: 'syllabus_mapping' },
         { name: 'deep_analyze' },
         { name: 'report_generation' },
       ];
+    } else {
+      throw new Error(`Unsupported task type: ${type}`);
     }
 
-    throw new Error(`Unsupported task type: ${type}`);
+    if (savePlan) {
+      this.localStorage.saveFile(
+        taskId,
+        'plan.json',
+        JSON.stringify(plan.map((s) => s.name), null, 2),
+      );
+    }
+
+    return plan;
   }
 
   // ✅ Task metadata access
@@ -148,6 +168,12 @@ export class TaskService {
 
   getClassInfo(taskId: string) {
     return this.localStorage.readJsonSafe(taskId, 'class_info.json');
+  }
+
+  getTaskPlan(taskId: string): string[] {
+    return (
+      this.localStorage.readJsonSafe(taskId, 'plan.json') || []
+    );
   }
 
   getTaskReport(taskId: string) {
